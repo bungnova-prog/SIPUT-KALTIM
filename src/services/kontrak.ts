@@ -109,6 +109,7 @@ export interface AuthService {
   statusKonfigurasi(): { lengkap: boolean };
   pulihkanSesiAktif(): Promise<Hasil<ProfilPengguna | null>>;
   masukDenganEmailSandi(email: string, kataSandi: string): Promise<Hasil<ProfilPengguna>>;
+  masukSebagaiSimulasi?(peran?: Peran): Promise<Hasil<ProfilPengguna>>;
   keluarSistem(): Promise<Hasil<void>>;
   langgananSesiAuth(cb: (profil: ProfilPengguna | null) => void): () => void;
 }

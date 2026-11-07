@@ -8,6 +8,7 @@ import {
   LogIn,
   Mail,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { useAppStore } from '../lib/storeAplikasi';
 import { authService } from '../services';
@@ -46,6 +47,27 @@ export default function HalamanMasuk() {
     tambahToast({
       jenis: 'sukses',
       judul: 'Autentikasi Berhasil',
+      pesan: `Selamat datang, ${hasil.data.nama} (${hasil.data.namaWilayah}).`,
+    });
+    navigate('/dashboard', { replace: true });
+  };
+
+  const tanganiMasukSimulasi = async (peran: 'admin' | 'operator' | 'petugas') => {
+    if (!authService.masukSebagaiSimulasi) return;
+    setPesanGalat(null);
+    setSedangMemproses(true);
+    const hasil = await authService.masukSebagaiSimulasi(peran);
+    setSedangMemproses(false);
+
+    if (!hasil.ok) {
+      setPesanGalat(hasil.pesan);
+      return;
+    }
+
+    setelProfilTerautentikasi(hasil.data);
+    tambahToast({
+      jenis: 'sukses',
+      judul: 'Mode Simulasi Aktif',
       pesan: `Selamat datang, ${hasil.data.nama} (${hasil.data.namaWilayah}).`,
     });
     navigate('/dashboard', { replace: true });
@@ -220,6 +242,46 @@ export default function HalamanMasuk() {
                 <span>{sedangMemproses ? 'Memverifikasi Kredensial...' : 'Masuk ke SIPUT-KALTIM'}</span>
               </button>
             </form>
+
+            {/* Opsi Masuk Cepat / Mode Simulasi 1-Klik */}
+            <div className="mt-6 rounded-2xl border-2 border-brand-700 bg-brand-50/70 p-4 sm:p-5">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-brand-900" aria-hidden />
+                <h3 className="text-sm font-extrabold text-brand-900">
+                  Masuk Cepat 1-Klik (Mode Demonstrasi Kaltim)
+                </h3>
+              </div>
+              <p className="mt-1 text-xs leading-relaxed text-ink-600">
+                Tanpa perlu mendaftar atau mengatur basis data. Klik untuk langsung mencoba dan menjelajahi seluruh fitur aplikasi:
+              </p>
+              <div className="mt-3.5 flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => void tanganiMasukSimulasi('admin')}
+                  disabled={sedangMemproses}
+                  className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-brand-900 px-3.5 py-2.5 text-xs font-bold text-surface shadow-sm hover:bg-brand-850 disabled:opacity-60"
+                >
+                  <ShieldCheck className="h-4 w-4 text-gold-500" />
+                  <span>Admin Provinsi</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void tanganiMasukSimulasi('operator')}
+                  disabled={sedangMemproses}
+                  className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2.5 text-xs font-semibold text-ink-900 hover:bg-canvas disabled:opacity-60"
+                >
+                  <span>Operator UPTD</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void tanganiMasukSimulasi('petugas')}
+                  disabled={sedangMemproses}
+                  className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2.5 text-xs font-semibold text-ink-900 hover:bg-canvas disabled:opacity-60"
+                >
+                  <span>Petugas Lapangan</span>
+                </button>
+              </div>
+            </div>
 
             <div className="mt-6 rounded-xl border border-line bg-canvas p-3.5 text-xs text-ink-600">
               <p className="font-semibold text-ink-900">Kebijakan Pendaftaran Akun</p>
