@@ -1016,7 +1016,8 @@ select
   'Provinsi Kalimantan Timur',
   true
 from auth.users 
-where email = 'admin@kaltimprov.go.id'
+order by created_at asc limit 1
 on conflict (id) do update set
   peran = 'admin',
   aktif = true;
+
