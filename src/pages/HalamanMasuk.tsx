@@ -82,9 +82,9 @@ export default function HalamanMasuk() {
             <div>
               <div className="flex items-center gap-3">
                 <img
-                  src="/logo-simulasi.svg"
-                  alt="Logo placeholder SIPUT-KALTIM"
-                  className="h-11 w-11 shrink-0 rounded-lg bg-surface/10 p-1"
+                  src="/logo-kaltim.png"
+                  alt="Logo Pemprov Kalimantan Timur Ruhui Rahayu"
+                  className="h-12 w-auto shrink-0 object-contain drop-shadow"
                 />
                 <div>
                   <div className="flex items-center gap-2">

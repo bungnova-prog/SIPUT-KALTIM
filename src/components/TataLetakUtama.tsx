@@ -206,9 +206,9 @@ export default function TataLetakUtama() {
               <Menu className="h-5 w-5" aria-hidden />
             </button>
             <img
-              src="/logo-simulasi.svg"
-              alt="Placeholder logo simulasi SIPUT-KALTIM"
-              className="h-9 w-9 shrink-0"
+              src="/logo-kaltim.png"
+              alt="Logo Pemprov Kalimantan Timur Ruhui Rahayu"
+              className="h-10 w-auto shrink-0 object-contain"
             />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
