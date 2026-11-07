@@ -1,0 +1,1053 @@
+/**
+ * Data Simulasi Fase 1 — struktur kolom snake_case selaras dengan SCHEMA.md §3.
+ * SELURUH IDENTITAS PETUGAS, NIP, DAN LAPORAN DI BAWAH ADALAH FIKTIF & BERLABEL SIMULASI.
+ * Nama Kabupaten/Kota dan Kecamatan/Desa mengikuti wilayah administratif Kalimantan Timur.
+ */
+
+export interface DbProfileRow {
+  id: string;
+  nama: string;
+  nip: string | null;
+  jabatan: string;
+  peran: 'admin' | 'operator' | 'petugas';
+  wilayah_id: string | null;
+  wkpp: string;
+  aktif: boolean;
+}
+
+export interface DbUptdRow {
+  id: string;
+  nama: string;
+  kabupaten_id: string;
+  jumlah_pengamat_aktif: number;
+}
+
+export interface DbWilayahRow {
+  id: string;
+  tipe: 'kabupaten' | 'kecamatan' | 'desa';
+  nama: string;
+  parent_id: string | null;
+  uptd_id: string | null;
+  lat_pusat?: number;
+  lng_pusat?: number;
+}
+
+export interface DbKomoditasRow {
+  id: string;
+  nama: string;
+  aktif: boolean;
+  kode_ikon: 'lada' | 'sawit' | 'kakao' | 'karet' | 'aren' | 'kelapa_dalam' | 'kopi';
+}
+
+export interface DbOptRow {
+  id: string;
+  komoditas_id: string;
+  nama_lokal: string;
+  nama_ilmiah: string;
+  jenis: 'hama' | 'penyakit';
+  gejala: string;
+  rekomendasi: string;
+}
+
+export interface DbLaporanFotoRow {
+  id: string;
+  laporan_id: string;
+  nama_berkas: string;
+  path_storage: string;
+  geotag_lat: number;
+  geotag_lng: number;
+  urutan: 1 | 2 | 3;
+}
+
+export interface DbLaporanRow {
+  id: string;
+  kode: string;
+  petugas_id: string;
+  desa_id: string;
+  nama_blok: string;
+  lat: number;
+  lng: number;
+  komoditas_id: string;
+  opt_id: string;
+  fase_tanaman: 'tbm' | 'tm' | 'ttm_tr';
+  tahun: number;
+  triwulan: 1 | 2 | 3 | 4;
+  semester: 1 | 2;
+  luas_amatan: number;
+  luas_ringan: number;
+  luas_berat: number;
+  luas_terkendali: number;
+  status: 'draf' | 'menunggu' | 'terverifikasi' | 'ditolak';
+  rekomendasi_kultur: string;
+  rekomendasi_hayati: string;
+  rekomendasi_kimiawi: string;
+  catatan_verifikasi: string | null;
+  dibuat_pada: string;
+  diverifikasi_oleh: string | null;
+  diverifikasi_pada: string | null;
+}
+
+export interface DbNotifikasiRow {
+  id: string;
+  user_id: string;
+  judul: string;
+  isi: string;
+  tipe: 'laporan_baru' | 'peringatan_eksplosif' | 'menunggu_validasi' | 'info';
+  dibaca: boolean;
+  dibuat_pada: string;
+  laporan_id?: string;
+}
+
+function escapeXml(teks: string): string {
+  return teks
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+export function buatFotoSvgSimulasi(label: string, lat: number, lng: number, warna: string): string {
+  const labelAman = escapeXml(label);
+  const warnaAman = escapeXml(warna);
+  const latAman = Number.isFinite(lat) ? lat.toFixed(4) : '0.0000';
+  const lngAman = Number.isFinite(lng) ? lng.toFixed(4) : '0.0000';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="300" viewBox="0 0 480 300">
+    <rect width="480" height="300" fill="${warnaAman}" />
+    <rect x="16" y="16" width="448" height="268" rx="12" fill="#0B4A22" fill-opacity="0.18" stroke="#FFFFFF" stroke-opacity="0.4" />
+    <text x="32" y="54" fill="#FFFFFF" font-family="sans-serif" font-size="14" font-weight="bold">FOTO SIMULASI GEOTAGGING (FASE 1)</text>
+    <text x="32" y="84" fill="#DCF2E3" font-family="sans-serif" font-size="18" font-weight="bold">${labelAman}</text>
+    <text x="32" y="246" fill="#FFF3CC" font-family="monospace" font-size="13">WGS84: ${latAman}, ${lngAman}</text>
+    <text x="32" y="266" fill="#FFFFFF" font-family="sans-serif" font-size="11">Data Simulasi — Bukan Foto Lapangan Resmi</text>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+export const MOCK_UPTD: DbUptdRow[] = [
+  { id: 'uptd-ppta', nama: 'UPTD BPTP Wilayah Tengah (Samarinda, Kukar, Kubar, Mahulu)', kabupaten_id: 'kab-kukar', jumlah_pengamat_aktif: 18 },
+  { id: 'uptd-utara', nama: 'UPTD Proteksi Wilayah Utara (Kutim, Berau, Bontang)', kabupaten_id: 'kab-kutim', jumlah_pengamat_aktif: 14 },
+  { id: 'uptd-selatan', nama: 'UPTD Proteksi Wilayah Selatan (Paser, PPU, Balikpapan)', kabupaten_id: 'kab-paser', jumlah_pengamat_aktif: 12 },
+];
+
+// 10 Kabupaten/Kota Kalimantan Timur (7 Kabupaten + 3 Kota) beserta Kecamatan & Desa administratif
+export const MOCK_WILAYAH: DbWilayahRow[] = [
+  // Kabupaten (10)
+  { id: 'kab-paser', tipe: 'kabupaten', nama: 'Kab. Paser', parent_id: null, uptd_id: 'uptd-selatan', lat_pusat: -1.9019, lng_pusat: 116.1965 },
+  { id: 'kab-ppu', tipe: 'kabupaten', nama: 'Kab. Penajam Paser Utara', parent_id: null, uptd_id: 'uptd-selatan', lat_pusat: -1.3005, lng_pusat: 116.7164 },
+  { id: 'kab-kubar', tipe: 'kabupaten', nama: 'Kab. Kutai Barat', parent_id: null, uptd_id: 'uptd-ppta', lat_pusat: -0.2367, lng_pusat: 115.7764 },
+  { id: 'kab-kukar', tipe: 'kabupaten', nama: 'Kab. Kutai Kartanegara', parent_id: null, uptd_id: 'uptd-ppta', lat_pusat: -0.4402, lng_pusat: 116.9814 },
+  { id: 'kab-kutim', tipe: 'kabupaten', nama: 'Kab. Kutai Timur', parent_id: null, uptd_id: 'uptd-utara', lat_pusat: 0.8531, lng_pusat: 117.5906 },
+  { id: 'kab-berau', tipe: 'kabupaten', nama: 'Kab. Berau', parent_id: null, uptd_id: 'uptd-utara', lat_pusat: 2.1502, lng_pusat: 117.4945 },
+  { id: 'kab-mahulu', tipe: 'kabupaten', nama: 'Kab. Mahakam Ulu', parent_id: null, uptd_id: 'uptd-ppta', lat_pusat: 0.5256, lng_pusat: 115.2289 },
+  { id: 'kota-balikpapan', tipe: 'kabupaten', nama: 'Kota Balikpapan', parent_id: null, uptd_id: 'uptd-selatan', lat_pusat: -1.1502, lng_pusat: 116.8689 },
+  { id: 'kota-samarinda', tipe: 'kabupaten', nama: 'Kota Samarinda', parent_id: null, uptd_id: 'uptd-ppta', lat_pusat: -0.4518, lng_pusat: 117.1856 },
+  { id: 'kota-bontang', tipe: 'kabupaten', nama: 'Kota Bontang', parent_id: null, uptd_id: 'uptd-utara', lat_pusat: 0.1336, lng_pusat: 117.4752 },
+
+  // Kecamatan
+  { id: 'kec-longikis', tipe: 'kecamatan', nama: 'Long Ikis', parent_id: 'kab-paser', uptd_id: 'uptd-selatan' },
+  { id: 'kec-tanahgrogot', tipe: 'kecamatan', nama: 'Tanah Grogot', parent_id: 'kab-paser', uptd_id: 'uptd-selatan' },
+  { id: 'kec-babulu', tipe: 'kecamatan', nama: 'Babulu', parent_id: 'kab-ppu', uptd_id: 'uptd-selatan' },
+  { id: 'kec-sepaku', tipe: 'kecamatan', nama: 'Sepaku', parent_id: 'kab-ppu', uptd_id: 'uptd-selatan' },
+  { id: 'kec-barong', tipe: 'kecamatan', nama: 'Barong Tongkok', parent_id: 'kab-kubar', uptd_id: 'uptd-ppta' },
+  { id: 'kec-melak', tipe: 'kecamatan', nama: 'Melak', parent_id: 'kab-kubar', uptd_id: 'uptd-ppta' },
+  { id: 'kec-loajanan', tipe: 'kecamatan', nama: 'Loa Janan', parent_id: 'kab-kukar', uptd_id: 'uptd-ppta' },
+  { id: 'kec-muarabadak', tipe: 'kecamatan', nama: 'Muara Badak', parent_id: 'kab-kukar', uptd_id: 'uptd-ppta' },
+  { id: 'kec-sangatta', tipe: 'kecamatan', nama: 'Sangatta Utara', parent_id: 'kab-kutim', uptd_id: 'uptd-utara' },
+  { id: 'kec-muarawahau', tipe: 'kecamatan', nama: 'Muara Wahau', parent_id: 'kab-kutim', uptd_id: 'uptd-utara' },
+  { id: 'kec-sambaliung', tipe: 'kecamatan', nama: 'Sambaliung', parent_id: 'kab-berau', uptd_id: 'uptd-utara' },
+  { id: 'kec-talisayan', tipe: 'kecamatan', nama: 'Talisayan', parent_id: 'kab-berau', uptd_id: 'uptd-utara' },
+  { id: 'kec-longbagun', tipe: 'kecamatan', nama: 'Long Bagun', parent_id: 'kab-mahulu', uptd_id: 'uptd-ppta' },
+  { id: 'kec-bpnutara', tipe: 'kecamatan', nama: 'Balikpapan Utara', parent_id: 'kota-balikpapan', uptd_id: 'uptd-selatan' },
+  { id: 'kec-bpntimur', tipe: 'kecamatan', nama: 'Balikpapan Timur', parent_id: 'kota-balikpapan', uptd_id: 'uptd-selatan' },
+  { id: 'kec-smdutara', tipe: 'kecamatan', nama: 'Samarinda Utara', parent_id: 'kota-samarinda', uptd_id: 'uptd-ppta' },
+  { id: 'kec-palaran', tipe: 'kecamatan', nama: 'Palaran', parent_id: 'kota-samarinda', uptd_id: 'uptd-ppta' },
+  { id: 'kec-bontangbarat', tipe: 'kecamatan', nama: 'Bontang Barat', parent_id: 'kota-bontang', uptd_id: 'uptd-utara' },
+  { id: 'kec-bontangselatan', tipe: 'kecamatan', nama: 'Bontang Selatan', parent_id: 'kota-bontang', uptd_id: 'uptd-utara' },
+
+  // Desa / Kelurahan (minimal beberapa desa/kelurahan per kabupaten/kota)
+  { id: 'desa-pait', tipe: 'desa', nama: 'Pait', parent_id: 'kec-longikis', uptd_id: 'uptd-selatan', lat_pusat: -1.6124, lng_pusat: 116.2981 },
+  { id: 'desa-jone', tipe: 'desa', nama: 'Jone', parent_id: 'kec-tanahgrogot', uptd_id: 'uptd-selatan', lat_pusat: -1.8942, lng_pusat: 116.2104 },
+  { id: 'desa-babuludarat', tipe: 'desa', nama: 'Babulu Darat', parent_id: 'kec-babulu', uptd_id: 'uptd-selatan', lat_pusat: -1.4825, lng_pusat: 116.5392 },
+  { id: 'desa-bukitraya', tipe: 'desa', nama: 'Bukit Raya', parent_id: 'kec-sepaku', uptd_id: 'uptd-selatan', lat_pusat: -0.9524, lng_pusat: 116.7745 },
+  { id: 'desa-mencimai', tipe: 'desa', nama: 'Mencimai', parent_id: 'kec-barong', uptd_id: 'uptd-ppta', lat_pusat: -0.2548, lng_pusat: 115.7412 },
+  { id: 'desa-empaq', tipe: 'desa', nama: 'Empakuq', parent_id: 'kec-melak', uptd_id: 'uptd-ppta', lat_pusat: -0.2912, lng_pusat: 115.8315 },
+  { id: 'desa-loaduri', tipe: 'desa', nama: 'Loa Duri Ilir', parent_id: 'kec-loajanan', uptd_id: 'uptd-ppta', lat_pusat: -0.5841, lng_pusat: 117.0582 },
+  { id: 'desa-batuah', tipe: 'desa', nama: 'Batuah', parent_id: 'kec-loajanan', uptd_id: 'uptd-ppta', lat_pusat: -0.7124, lng_pusat: 117.0411 },
+  { id: 'desa-badakbaru', tipe: 'desa', nama: 'Badak Baru', parent_id: 'kec-muarabadak', uptd_id: 'uptd-ppta', lat_pusat: -0.3125, lng_pusat: 117.4108 },
+  { id: 'desa-swargabara', tipe: 'desa', nama: 'Swarga Bara', parent_id: 'kec-sangatta', uptd_id: 'uptd-utara', lat_pusat: 0.5218, lng_pusat: 117.5194 },
+  { id: 'desa-nehesliah', tipe: 'desa', nama: 'Nehes Liah Bing', parent_id: 'kec-muarawahau', uptd_id: 'uptd-utara', lat_pusat: 1.0785, lng_pusat: 116.8622 },
+  { id: 'desa-seibebanir', tipe: 'desa', nama: 'Sei Bebanir Bangun', parent_id: 'kec-sambaliung', uptd_id: 'uptd-utara', lat_pusat: 2.1105, lng_pusat: 117.5321 },
+  { id: 'desa-bumijaya', tipe: 'desa', nama: 'Bumi Jaya', parent_id: 'kec-talisayan', uptd_id: 'uptd-utara', lat_pusat: 1.5944, lng_pusat: 118.1812 },
+  { id: 'desa-ujohbilang', tipe: 'desa', nama: 'Ujoh Bilang', parent_id: 'kec-longbagun', uptd_id: 'uptd-ppta', lat_pusat: 0.5312, lng_pusat: 115.2418 },
+  { id: 'desa-batumajang', tipe: 'desa', nama: 'Batu Majang', parent_id: 'kec-longbagun', uptd_id: 'uptd-ppta', lat_pusat: 0.5485, lng_pusat: 115.2184 },
+  { id: 'desa-karangjoang', tipe: 'desa', nama: 'Karang Joang', parent_id: 'kec-bpnutara', uptd_id: 'uptd-selatan', lat_pusat: -1.1408, lng_pusat: 116.8712 },
+  { id: 'desa-teritip', tipe: 'desa', nama: 'Teritip', parent_id: 'kec-bpntimur', uptd_id: 'uptd-selatan', lat_pusat: -1.1965, lng_pusat: 116.9682 },
+  { id: 'desa-lempake', tipe: 'desa', nama: 'Lempake', parent_id: 'kec-smdutara', uptd_id: 'uptd-ppta', lat_pusat: -0.4315, lng_pusat: 117.2041 },
+  { id: 'desa-bukuan', tipe: 'desa', nama: 'Bukuan', parent_id: 'kec-palaran', uptd_id: 'uptd-ppta', lat_pusat: -0.5814, lng_pusat: 117.1892 },
+  { id: 'desa-kanaan', tipe: 'desa', nama: 'Kanaan', parent_id: 'kec-bontangbarat', uptd_id: 'uptd-utara', lat_pusat: 0.1288, lng_pusat: 117.4541 },
+  { id: 'desa-bontanglestari', tipe: 'desa', nama: 'Bontang Lestari', parent_id: 'kec-bontangselatan', uptd_id: 'uptd-utara', lat_pusat: 0.0615, lng_pusat: 117.4412 },
+];
+
+// 7 Komoditas Baku Terpisah (AGENTS.md §8)
+export const MOCK_KOMODITAS: DbKomoditasRow[] = [
+  { id: 'kom-lada', nama: 'Lada', aktif: true, kode_ikon: 'lada' },
+  { id: 'kom-sawit', nama: 'Kelapa Sawit', aktif: true, kode_ikon: 'sawit' },
+  { id: 'kom-kakao', nama: 'Kakao', aktif: true, kode_ikon: 'kakao' },
+  { id: 'kom-karet', nama: 'Karet', aktif: true, kode_ikon: 'karet' },
+  { id: 'kom-aren', nama: 'Aren', aktif: true, kode_ikon: 'aren' },
+  { id: 'kom-kelapa', nama: 'Kelapa Dalam', aktif: true, kode_ikon: 'kelapa_dalam' },
+  { id: 'kom-kopi', nama: 'Kopi', aktif: true, kode_ikon: 'kopi' },
+];
+
+export const MOCK_OPT: DbOptRow[] = [
+  {
+    id: 'opt-ganoderma',
+    komoditas_id: 'kom-sawit',
+    nama_lokal: 'Busuk Pangkal Batang',
+    nama_ilmiah: 'Ganoderma boninense',
+    jenis: 'penyakit',
+    gejala: 'Daun tombak tidak membuka lebih dari 3 pelepah, pelepah bawah mengering dan menggantung, muncul tubuh buah jamur di pangkal batang.',
+    rekomendasi: 'Parit isolasi 1x1 m pada pokok terserang, aplikasi agens hayati Trichoderma harzianum, sanitasi bonggol terinfeksi.',
+  },
+  {
+    id: 'opt-oryctes',
+    komoditas_id: 'kom-sawit',
+    nama_lokal: 'Kumbang Tanduk',
+    nama_ilmiah: 'Oryctes rhinoceros',
+    jenis: 'hama',
+    gejala: 'Pelepah daun muda terpotong berbentuk segitiga seperti huruf V dan terdapat gerekan pada titik tumbuh.',
+    rekomendasi: 'Pemasangan feromon agregat (Feromonas), aplikasi jamur entomopatogen Metarhizium anisopliae pada tumpukan tandan kosong.',
+  },
+  {
+    id: 'opt-ulatapi',
+    komoditas_id: 'kom-sawit',
+    nama_lokal: 'Ulat Api',
+    nama_ilmiah: 'Setora nitens',
+    jenis: 'hama',
+    gejala: 'Helaian anak daun habis dimakan hingga menyisakan lidi dari pelepah bawah merambat ke tajuk atas.',
+    rekomendasi: 'Penanaman tanaman bermanfaat Turnera subulata, konservasi musuh alami Sycanus sp., pengutipan kepompong.',
+  },
+  {
+    id: 'opt-bpblada',
+    komoditas_id: 'kom-lada',
+    nama_lokal: 'Busuk Pangkal Batang Lada',
+    nama_ilmiah: 'Phytophthora capsici',
+    jenis: 'penyakit',
+    gejala: 'Layu mendadak seluruh sulur, bercak hitam berlendir pada leher akar, daun menguning lalu gugur cepat.',
+    rekomendasi: 'Pembuatan saluran drainase kebun, pemangkasan sulur cacing, pemberian bubur Bordeaux dan Trichoderma sp.',
+  },
+  {
+    id: 'opt-dasynus',
+    komoditas_id: 'kom-lada',
+    nama_lokal: 'Kepik Penghisap Buah Lada',
+    nama_ilmiah: 'Dasynus piperis',
+    jenis: 'hama',
+    gejala: 'Buah lada menghitam, kosong (hampa), dan rontok sebelum masak fisiologis.',
+    rekomendasi: 'Sanitasi gulma inang, pemanfaatan jamur Beauveria bassiana pada pagi/sore hari.',
+  },
+  {
+    id: 'opt-pbk',
+    komoditas_id: 'kom-kakao',
+    nama_lokal: 'Penggerek Buah Kakao (PBK)',
+    nama_ilmiah: 'Conopomorpha cramerella',
+    jenis: 'hama',
+    gejala: 'Buah masak awal belang kuning-hijau, biji saling melekat dan berwarna kehitaman saat dibelah.',
+    rekomendasi: 'PsPSP (Panen sering, Pemangkasan teratur, Sanitasi kulit buah, Pemupukan berimbang) serta sarungisasi buah.',
+  },
+  {
+    id: 'opt-busukbuahkakao',
+    komoditas_id: 'kom-kakao',
+    nama_lokal: 'Busuk Buah Kakao',
+    nama_ilmiah: 'Phytophthora palmivora',
+    jenis: 'penyakit',
+    gejala: 'Bercak cokelat kehitaman berbatas tegas dimulai dari ujung atau pangkal buah dan tertutup miselium putih.',
+    rekomendasi: 'Pemangkasan penaung untuk menurunkan kelembapan, pemetikan dan penguburan buah busuk sedalam 30 cm.',
+  },
+  {
+    id: 'opt-gugurdaunkaret',
+    komoditas_id: 'kom-karet',
+    nama_lokal: 'Gugur Daun Corynespora',
+    nama_ilmiah: 'Corynespora cassiicola',
+    jenis: 'penyakit',
+    gejala: 'Bercak nekrotik menyirip seperti tulang ikan sepanjang tulang daun diikuti gugur daun berulang.',
+    rekomendasi: 'Pemupukan ekstra K pada awal pembentukan daun baru, aplikasi fungisida selektif pada kebun pembibitan.',
+  },
+  {
+    id: 'opt-jamurakarputih',
+    komoditas_id: 'kom-karet',
+    nama_lokal: 'Jamur Akar Putih (JAP)',
+    nama_ilmiah: 'Rigidoporus microporus',
+    jenis: 'penyakit',
+    gejala: 'Daun kusam menguning lalu meranggas, terdapat rizomorfa putih menjalar kuat pada permukaan akar tunggang.',
+    rekomendasi: 'Pembukaan leher akar, pengolesan belerang/Trichoderma konidia pada perakaran sehat di sekeliling pohon sakit.',
+  },
+  {
+    id: 'opt-artona',
+    komoditas_id: 'kom-aren',
+    nama_lokal: 'Ulat Daun Aren',
+    nama_ilmiah: 'Artona catoxantha',
+    jenis: 'hama',
+    gejala: ' Bercak transparan memanjang seperti tangga pada helaian daun tua yang mengering seperti terbakar.',
+    rekomendasi: 'Pemangkasan pelepah tua terserang berat dan pelepasan parasitoid Apanteles artonae.',
+  },
+  {
+    id: 'opt-brontispa',
+    komoditas_id: 'kom-kelapa',
+    nama_lokal: 'Kumbang Janur Kelapa',
+    nama_ilmiah: 'Brontispa longissima',
+    jenis: 'hama',
+    gejala: 'Janur yang belum membuka tampak cokelat mengering dan berkerut akibat gerekan larva dan imago.',
+    rekomendasi: 'Pelepasan parasitoid Tetrastichus brontispae dan aplikasi Metarhizium anisopliae pada pucuk kelapa.',
+  },
+  {
+    id: 'opt-pbkopi',
+    komoditas_id: 'kom-kopi',
+    nama_lokal: 'Penggerek Buah Kopi (PBKo)',
+    nama_ilmiah: 'Hypothenemus hampei',
+    jenis: 'hama',
+    gejala: 'Lubang kecil di cakram ujung buah kopi; buah muda gugur dan buah tua berlubang-lubang menurunkan mutu biji.',
+    rekomendasi: 'Lelesan, racutan, rampasan buah tersisa pascapanen serta pemasangan perangkap atraktan alkohol-metanol.',
+  },
+];
+
+// Profil pengguna fiktif berlabel simulasi (SECURITY.md §9 & SCHEMA.md §8)
+export const MOCK_PROFILES: DbProfileRow[] = [
+  {
+    id: 'usr-admin-01',
+    nama: 'Admin Provinsi (Simulasi)',
+    nip: 'SIM-PROV-0001',
+    jabatan: 'Koordinator Perlindungan Perkebunan (Simulasi)',
+    peran: 'admin',
+    wilayah_id: null,
+    wkpp: 'Provinsi Kalimantan Timur',
+    aktif: true,
+  },
+  {
+    id: 'usr-op-kukar',
+    nama: 'Operator UPTD Tengah (Simulasi)',
+    nip: 'SIM-UPTD-0102',
+    jabatan: 'Verifikator Data OPT Wilayah Tengah (Simulasi)',
+    peran: 'operator',
+    wilayah_id: 'kab-kukar',
+    wkpp: 'UPTD Wilayah Tengah — Kukar',
+    aktif: true,
+  },
+  {
+    id: 'usr-op-kutim',
+    nama: 'Operator UPTD Utara (Simulasi)',
+    nip: 'SIM-UPTD-0103',
+    jabatan: 'Verifikator Data OPT Wilayah Utara (Simulasi)',
+    peran: 'operator',
+    wilayah_id: 'kab-kutim',
+    wkpp: 'UPTD Wilayah Utara — Kutim',
+    aktif: true,
+  },
+  {
+    id: 'usr-popt-01',
+    nama: 'Petugas POPT Loa Janan (Simulasi)',
+    nip: 'SIM-POPT-2001',
+    jabatan: 'Petugas POPT Ahli Pertama (Simulasi)',
+    peran: 'petugas',
+    wilayah_id: 'kab-kukar',
+    wkpp: 'WKPP Loa Janan & Batuah',
+    aktif: true,
+  },
+  {
+    id: 'usr-popt-02',
+    nama: 'Petugas POPT Sangatta (Simulasi)',
+    nip: 'SIM-POPT-2002',
+    jabatan: 'Petugas POPT Terampil (Simulasi)',
+    peran: 'petugas',
+    wilayah_id: 'kab-kutim',
+    wkpp: 'WKPP Sangatta & Muara Wahau',
+    aktif: true,
+  },
+  {
+    id: 'usr-popt-03',
+    nama: 'Petugas POPT Long Ikis (Simulasi)',
+    nip: 'SIM-POPT-2003',
+    jabatan: 'Petugas POPT Terampil (Simulasi)',
+    peran: 'petugas',
+    wilayah_id: 'kab-paser',
+    wkpp: 'WKPP Long Ikis & Tanah Grogot',
+    aktif: true,
+  },
+  {
+    id: 'usr-popt-04',
+    nama: 'Petugas POPT Sambaliung (Simulasi)',
+    nip: 'SIM-POPT-2004',
+    jabatan: 'Petugas POPT Ahli Muda (Simulasi)',
+    peran: 'petugas',
+    wilayah_id: 'kab-berau',
+    wkpp: 'WKPP Sambaliung & Talisayan',
+    aktif: true,
+  },
+  {
+    id: 'usr-popt-05',
+    nama: 'Petugas POPT Barong Tongkok (Simulasi)',
+    nip: 'SIM-POPT-2005',
+    jabatan: 'Petugas POPT Terampil (Simulasi)',
+    peran: 'petugas',
+    wilayah_id: 'kab-kubar',
+    wkpp: 'WKPP Barong Tongkok & Melak',
+    aktif: true,
+  },
+  {
+    id: 'usr-popt-06',
+    nama: 'Petugas POPT Babulu (Simulasi)',
+    nip: 'SIM-POPT-2006',
+    jabatan: 'Petugas POPT Ahli Pertama (Simulasi)',
+    peran: 'petugas',
+    wilayah_id: 'kab-ppu',
+    wkpp: 'WKPP Babulu & Sepaku',
+    aktif: true,
+  },
+  {
+    id: 'usr-popt-07',
+    nama: 'Petugas POPT Long Bagun (Simulasi)',
+    nip: 'SIM-POPT-2007',
+    jabatan: 'Petugas POPT Terampil (Simulasi)',
+    peran: 'petugas',
+    wilayah_id: 'kab-mahulu',
+    wkpp: 'WKPP Long Bagun',
+    aktif: true,
+  },
+  {
+    id: 'usr-popt-08',
+    nama: 'Petugas POPT Karang Joang (Simulasi)',
+    nip: 'SIM-POPT-2008',
+    jabatan: 'Petugas POPT Ahli Pertama (Simulasi)',
+    peran: 'petugas',
+    wilayah_id: 'kota-balikpapan',
+    wkpp: 'WKPP Balikpapan Utara & Timur',
+    aktif: true,
+  },
+  {
+    id: 'usr-popt-09',
+    nama: 'Petugas POPT Lempake (Simulasi)',
+    nip: 'SIM-POPT-2009',
+    jabatan: 'Petugas POPT Ahli Muda (Simulasi)',
+    peran: 'petugas',
+    wilayah_id: 'kota-samarinda',
+    wkpp: 'WKPP Samarinda Utara & Palaran',
+    aktif: true,
+  },
+  {
+    id: 'usr-popt-10',
+    nama: 'Petugas POPT Kanaan (Simulasi)',
+    nip: 'SIM-POPT-2010',
+    jabatan: 'Petugas POPT Terampil (Simulasi)',
+    peran: 'petugas',
+    wilayah_id: 'kota-bontang',
+    wkpp: 'WKPP Bontang Barat & Selatan',
+    aktif: true,
+  },
+];
+
+// Laporan mencakup seluruh 10 Kab/Kota, 7 Komoditas, TW 1-4 tahun 2026, serta semua tingkat & status
+export const MOCK_LAPORAN: DbLaporanRow[] = [
+  {
+    id: 'lap-001',
+    kode: 'SIM-KKR-2026-001',
+    petugas_id: 'usr-popt-01',
+    desa_id: 'desa-batuah',
+    nama_blok: 'Poktan Karya Tani Blok A2',
+    lat: -0.7124,
+    lng: 117.0411,
+    komoditas_id: 'kom-lada',
+    opt_id: 'opt-bpblada',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 4,
+    semester: 2,
+    luas_amatan: 180,
+    luas_ringan: 32,
+    luas_berat: 68,
+    luas_terkendali: 45,
+    status: 'menunggu',
+    rekomendasi_kultur: 'Perbaikan parit drainase keliling kebun lada dan pemangkasan sulur tanah.',
+    rekomendasi_hayati: 'Aplikasi Trichoderma sp. padat 100 gr/tiang panjat setiap 2 minggu.',
+    rekomendasi_kimiawi: 'Eradikasi selektif rumpun layu berat dan pengapuran lubang tanam.',
+    catatan_verifikasi: null,
+    dibuat_pada: '2026-11-05T05:30:00Z',
+    diverifikasi_oleh: null,
+    diverifikasi_pada: null,
+  },
+  {
+    id: 'lap-002',
+    kode: 'SIM-KTM-2026-002',
+    petugas_id: 'usr-popt-02',
+    desa_id: 'desa-nehesliah',
+    nama_blok: 'KUD Sawit Mandiri Afdeling IV',
+    lat: 1.0785,
+    lng: 116.8622,
+    komoditas_id: 'kom-sawit',
+    opt_id: 'opt-ganoderma',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 4,
+    semester: 2,
+    luas_amatan: 640,
+    luas_ringan: 120,
+    luas_berat: 235,
+    luas_terkendali: 190,
+    status: 'terverifikasi',
+    rekomendasi_kultur: 'Pembuatan parit isolasi ukuran 1x1 m mengelilingi pokok sawit tumbang.',
+    rekomendasi_hayati: 'Inokulasi biofungisida Trichoderma harzianum pada piringan.',
+    rekomendasi_kimiawi: 'Bongkar dan cincang batang terinfeksi berat agar tidak menjadi inokulum.',
+    catatan_verifikasi: 'Data tervalidasi oleh Operator UPTD Utara (Simulasi).',
+    dibuat_pada: '2026-11-04T03:15:00Z',
+    diverifikasi_oleh: 'usr-op-kutim',
+    diverifikasi_pada: '2026-11-04T07:20:00Z',
+  },
+  {
+    id: 'lap-003',
+    kode: 'SIM-PSR-2026-003',
+    petugas_id: 'usr-popt-03',
+    desa_id: 'desa-pait',
+    nama_blok: 'Poktan Harapan Jaya Blok C',
+    lat: -1.6124,
+    lng: 116.2981,
+    komoditas_id: 'kom-sawit',
+    opt_id: 'opt-oryctes',
+    fase_tanaman: 'tbm',
+    tahun: 2026,
+    triwulan: 4,
+    semester: 2,
+    luas_amatan: 420,
+    luas_ringan: 95,
+    luas_berat: 45,
+    luas_terkendali: 180,
+    status: 'terverifikasi',
+    rekomendasi_kultur: 'Pencacahan batang replanting tipis dan penanaman kacangan penutup tanah Mucuna bracteata.',
+    rekomendasi_hayati: 'Penyebaran Metarhizium anisopliae pada tumpukan bahan organik.',
+    rekomendasi_kimiawi: 'Pemasangan feromon agregat 1 perangkap per 2 hektar.',
+    catatan_verifikasi: 'Sesuai hasil pemantauan lapangan.',
+    dibuat_pada: '2026-10-28T02:10:00Z',
+    diverifikasi_oleh: 'usr-admin-01',
+    diverifikasi_pada: '2026-10-29T04:00:00Z',
+  },
+  {
+    id: 'lap-004',
+    kode: 'SIM-BRU-2026-004',
+    petugas_id: 'usr-popt-04',
+    desa_id: 'desa-seibebanir',
+    nama_blok: 'Poktan Kakao Lestari Berau',
+    lat: 2.1105,
+    lng: 117.5321,
+    komoditas_id: 'kom-kakao',
+    opt_id: 'opt-pbk',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 4,
+    semester: 2,
+    luas_amatan: 260,
+    luas_ringan: 48,
+    luas_berat: 92,
+    luas_terkendali: 75,
+    status: 'menunggu',
+    rekomendasi_kultur: 'Panen sering 7 hari sekali dan pemangkasan bentuk tajuk.',
+    rekomendasi_hayati: 'Penyemprotan Beauveria bassiana pada buah ukuran 8–10 cm.',
+    rekomendasi_kimiawi: 'Sarungisasi buah muda dan penguburan kulit buah pascapanen.',
+    catatan_verifikasi: null,
+    dibuat_pada: '2026-11-03T06:40:00Z',
+    diverifikasi_oleh: null,
+    diverifikasi_pada: null,
+  },
+  {
+    id: 'lap-005',
+    kode: 'SIM-KBR-2026-005',
+    petugas_id: 'usr-popt-05',
+    desa_id: 'desa-mencimai',
+    nama_blok: 'Kebun Karet Rakyat Mencimai',
+    lat: -0.2548,
+    lng: 115.7412,
+    komoditas_id: 'kom-karet',
+    opt_id: 'opt-jamurakarputih',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 4,
+    semester: 2,
+    luas_amatan: 310,
+    luas_ringan: 64,
+    luas_berat: 32,
+    luas_terkendali: 140,
+    status: 'terverifikasi',
+    rekomendasi_kultur: 'Pembukaan leher akar untuk penyinaran matahari dan pembuatan parit isolasi.',
+    rekomendasi_hayati: 'Tabur serbuk belerang + kompos Trichoderma 150 gr/pohon.',
+    rekomendasi_kimiawi: 'Pengolesan fungisida sistemik terarah hanya pada leher akar gejala awal.',
+    catatan_verifikasi: 'Diverifikasi rutin.',
+    dibuat_pada: '2026-10-22T01:45:00Z',
+    diverifikasi_oleh: 'usr-admin-01',
+    diverifikasi_pada: '2026-10-23T03:00:00Z',
+  },
+  {
+    id: 'lap-006',
+    kode: 'SIM-PPU-2026-006',
+    petugas_id: 'usr-popt-06',
+    desa_id: 'desa-babuludarat',
+    nama_blok: 'Poktan Subur Makmur Babulu',
+    lat: -1.4825,
+    lng: 116.5392,
+    komoditas_id: 'kom-sawit',
+    opt_id: 'opt-ulatapi',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 4,
+    semester: 2,
+    luas_amatan: 290,
+    luas_ringan: 42,
+    luas_berat: 14,
+    luas_terkendali: 190,
+    status: 'terverifikasi',
+    rekomendasi_kultur: 'Penanaman Turnera subulata di sepanjang pinggir jalan kebun.',
+    rekomendasi_hayati: 'Konservasi predator Sycanus dichotomus dan aplikasi virus NPV.',
+    rekomendasi_kimiawi: 'Tidak diperlukan aplikasi kimiawi karena masih di bawah ambang darurat.',
+    catatan_verifikasi: 'Status terkendali baik.',
+    dibuat_pada: '2026-10-19T04:30:00Z',
+    diverifikasi_oleh: 'usr-admin-01',
+    diverifikasi_pada: '2026-10-20T02:15:00Z',
+  },
+  {
+    id: 'lap-007',
+    kode: 'SIM-MHU-2026-007',
+    petugas_id: 'usr-popt-07',
+    desa_id: 'desa-ujohbilang',
+    nama_blok: 'Sentra Kakao Hulu Mahakam',
+    lat: 0.5312,
+    lng: 115.2418,
+    komoditas_id: 'kom-kakao',
+    opt_id: 'opt-busukbuahkakao',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 4,
+    semester: 2,
+    luas_amatan: 145,
+    luas_ringan: 28,
+    luas_berat: 18,
+    luas_terkendali: 65,
+    status: 'terverifikasi',
+    rekomendasi_kultur: 'Pemangkasan pohon pelindung untuk menurunkan kelembapan mikro kebun.',
+    rekomendasi_hayati: 'Semprot suspensi Trichoderma asperellum pascapanen.',
+    rekomendasi_kimiawi: 'Sanitasi dan penimbunan buah busuk.',
+    catatan_verifikasi: 'Diverifikasi wilayah hulu.',
+    dibuat_pada: '2026-10-15T05:10:00Z',
+    diverifikasi_oleh: 'usr-admin-01',
+    diverifikasi_pada: '2026-10-16T06:00:00Z',
+  },
+  {
+    id: 'lap-008',
+    kode: 'SIM-BPN-2026-008',
+    petugas_id: 'usr-popt-08',
+    desa_id: 'desa-karangjoang',
+    nama_blok: 'Kelompok Tani Karet Km 15',
+    lat: -1.1408,
+    lng: 116.8712,
+    komoditas_id: 'kom-karet',
+    opt_id: 'opt-gugurdaunkaret',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 4,
+    semester: 2,
+    luas_amatan: 120,
+    luas_ringan: 18,
+    luas_berat: 6,
+    luas_terkendali: 80,
+    status: 'terverifikasi',
+    rekomendasi_kultur: 'Pemupukan tambahan Kalium pada awal pembentukan pucuk baru.',
+    rekomendasi_hayati: 'Aplikasi kompos diperkaya mikroba antagonis.',
+    rekomendasi_kimiawi: 'Pemantauan berkala tanpa penyemprotan tajuk.',
+    catatan_verifikasi: 'Ringan terkendali.',
+    dibuat_pada: '2026-10-12T03:00:00Z',
+    diverifikasi_oleh: 'usr-admin-01',
+    diverifikasi_pada: '2026-10-13T03:00:00Z',
+  },
+  {
+    id: 'lap-009',
+    kode: 'SIM-SMD-2026-009',
+    petugas_id: 'usr-popt-09',
+    desa_id: 'desa-lempake',
+    nama_blok: 'Poktan Aren Manis Lempake',
+    lat: -0.4315,
+    lng: 117.2041,
+    komoditas_id: 'kom-aren',
+    opt_id: 'opt-artona',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 4,
+    semester: 2,
+    luas_amatan: 95,
+    luas_ringan: 16,
+    luas_berat: 5,
+    luas_terkendali: 60,
+    status: 'terverifikasi',
+    rekomendasi_kultur: 'Pemangkasan pelepah tua kering di bagian bawah tajuk.',
+    rekomendasi_hayati: 'Pelepasan parasitoid lokal Apanteles artonae.',
+    rekomendasi_kimiawi: 'Tanpa perlakuan kimiawi.',
+    catatan_verifikasi: 'Data lengkap.',
+    dibuat_pada: '2026-10-18T02:20:00Z',
+    diverifikasi_oleh: 'usr-admin-01',
+    diverifikasi_pada: '2026-10-19T01:10:00Z',
+  },
+  {
+    id: 'lap-010',
+    kode: 'SIM-BTG-2026-010',
+    petugas_id: 'usr-popt-10',
+    desa_id: 'desa-kanaan',
+    nama_blok: 'Poktan Kopi Liberika Kanaan',
+    lat: 0.1288,
+    lng: 117.4541,
+    komoditas_id: 'kom-kopi',
+    opt_id: 'opt-pbkopi',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 4,
+    semester: 2,
+    luas_amatan: 85,
+    luas_ringan: 14,
+    luas_berat: 8,
+    luas_terkendali: 50,
+    status: 'menunggu',
+    rekomendasi_kultur: 'Petik bubuk, lelesan buah jatuh, dan pemangkasan lepas panen.',
+    rekomendasi_hayati: 'Penyemprotan jamur Beauveria bassiana pada dompolan buah.',
+    rekomendasi_kimiawi: 'Pemasangan perangkap senyawa atraktan hipotan.',
+    catatan_verifikasi: null,
+    dibuat_pada: '2026-11-02T04:00:00Z',
+    diverifikasi_oleh: null,
+    diverifikasi_pada: null,
+  },
+  {
+    id: 'lap-011',
+    kode: 'SIM-KKR-2026-011',
+    petugas_id: 'usr-popt-01',
+    desa_id: 'desa-badakbaru',
+    nama_blok: 'Sentra Kelapa Dalam Pesisir Badak',
+    lat: -0.3125,
+    lng: 117.4108,
+    komoditas_id: 'kom-kelapa',
+    opt_id: 'opt-brontispa',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 4,
+    semester: 2,
+    luas_amatan: 210,
+    luas_ringan: 38,
+    luas_berat: 24,
+    luas_terkendali: 115,
+    status: 'terverifikasi',
+    rekomendasi_kultur: 'Sanitasi janur kering dan pemupukan NPK seimbang.',
+    rekomendasi_hayati: 'Pelepasan parasitoid pupa Tetrastichus brontispae.',
+    rekomendasi_kimiawi: 'Aplikasi Metarhizium pada titik tumbuh kelapa muda.',
+    catatan_verifikasi: 'Terverifikasi pesisir Kukar.',
+    dibuat_pada: '2026-10-25T05:00:00Z',
+    diverifikasi_oleh: 'usr-op-kukar',
+    diverifikasi_pada: '2026-10-26T02:00:00Z',
+  },
+  // Data historis Triwulan I, II, III tahun 2026 untuk grafik tren fluktuasi & tren bulanan
+  {
+    id: 'lap-012',
+    kode: 'SIM-KTM-2026-012',
+    petugas_id: 'usr-popt-02',
+    desa_id: 'desa-swargabara',
+    nama_blok: 'Kebun Sawit Rakyat Sangatta Blok B',
+    lat: 0.5218,
+    lng: 117.5194,
+    komoditas_id: 'kom-sawit',
+    opt_id: 'opt-ganoderma',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 1,
+    semester: 1,
+    luas_amatan: 520,
+    luas_ringan: 90,
+    luas_berat: 75,
+    luas_terkendali: 240,
+    status: 'terverifikasi',
+    rekomendasi_kultur: 'Parit isolasi pokok sakit.',
+    rekomendasi_hayati: 'Aplikasi Trichoderma harzianum.',
+    rekomendasi_kimiawi: 'Sanitasi bonggol tua.',
+    catatan_verifikasi: 'Rekap TW I.',
+    dibuat_pada: '2026-02-14T03:00:00Z',
+    diverifikasi_oleh: 'usr-op-kutim',
+    diverifikasi_pada: '2026-02-15T04:00:00Z',
+  },
+  {
+    id: 'lap-013',
+    kode: 'SIM-KKR-2026-013',
+    petugas_id: 'usr-popt-01',
+    desa_id: 'desa-loaduri',
+    nama_blok: 'Poktan Lada Makmur Loa Duri',
+    lat: -0.5841,
+    lng: 117.0582,
+    komoditas_id: 'kom-lada',
+    opt_id: 'opt-dasynus',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 1,
+    semester: 1,
+    luas_amatan: 165,
+    luas_ringan: 30,
+    luas_berat: 18,
+    luas_terkendali: 90,
+    status: 'terverifikasi',
+    rekomendasi_kultur: 'Penyiangan gulma inang di sekitar tiang panjat.',
+    rekomendasi_hayati: 'Penyemprotan Beauveria bassiana.',
+    rekomendasi_kimiawi: 'Perangkap likat kuning.',
+    catatan_verifikasi: 'Rekap TW I.',
+    dibuat_pada: '2026-03-10T02:00:00Z',
+    diverifikasi_oleh: 'usr-op-kukar',
+    diverifikasi_pada: '2026-03-11T04:00:00Z',
+  },
+  {
+    id: 'lap-014',
+    kode: 'SIM-PSR-2026-014',
+    petugas_id: 'usr-popt-03',
+    desa_id: 'desa-jone',
+    nama_blok: 'Kebun Karet Terpadu Jone',
+    lat: -1.8942,
+    lng: 116.2104,
+    komoditas_id: 'kom-karet',
+    opt_id: 'opt-gugurdaunkaret',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 2,
+    semester: 1,
+    luas_amatan: 340,
+    luas_ringan: 78,
+    luas_berat: 42,
+    luas_terkendali: 155,
+    status: 'terverifikasi',
+    rekomendasi_kultur: 'Pemupukan berimbang awal musim kemarau.',
+    rekomendasi_hayati: 'Aplikasi agens antagonis tanah.',
+    rekomendasi_kimiawi: 'Pengawasan intensif.',
+    catatan_verifikasi: 'Rekap TW II.',
+    dibuat_pada: '2026-05-18T03:00:00Z',
+    diverifikasi_oleh: 'usr-admin-01',
+    diverifikasi_pada: '2026-05-19T05:00:00Z',
+  },
+  {
+    id: 'lap-015',
+    kode: 'SIM-BRU-2026-015',
+    petugas_id: 'usr-popt-04',
+    desa_id: 'desa-bumijaya',
+    nama_blok: 'Sentra Kelapa Dalam Pesisir Talisayan',
+    lat: 1.5944,
+    lng: 118.1812,
+    komoditas_id: 'kom-kelapa',
+    opt_id: 'opt-brontispa',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 2,
+    semester: 1,
+    luas_amatan: 275,
+    luas_ringan: 52,
+    luas_berat: 28,
+    luas_terkendali: 140,
+    status: 'terverifikasi',
+    rekomendasi_kultur: 'Sanitasi mahkota kelapa.',
+    rekomendasi_hayati: 'Pelepasan Tetrastichus brontispae.',
+    rekomendasi_kimiawi: 'Tanpa insektisida sintetik.',
+    catatan_verifikasi: 'Rekap TW II.',
+    dibuat_pada: '2026-06-09T04:00:00Z',
+    diverifikasi_oleh: 'usr-admin-01',
+    diverifikasi_pada: '2026-06-10T02:00:00Z',
+  },
+  {
+    id: 'lap-016',
+    kode: 'SIM-KTM-2026-016',
+    petugas_id: 'usr-popt-02',
+    desa_id: 'desa-nehesliah',
+    nama_blok: 'Plasma Sawit Muara Wahau Blok Timur',
+    lat: 1.0912,
+    lng: 116.8841,
+    komoditas_id: 'kom-sawit',
+    opt_id: 'opt-oryctes',
+    fase_tanaman: 'tbm',
+    tahun: 2026,
+    triwulan: 3,
+    semester: 2,
+    luas_amatan: 590,
+    luas_ringan: 135,
+    luas_berat: 185,
+    luas_terkendali: 180,
+    status: 'terverifikasi',
+    rekomendasi_kultur: 'Penghancuran tunggul sawit tua.',
+    rekomendasi_hayati: 'Aplikasi Metarhizium anisopliae.',
+    rekomendasi_kimiawi: 'Jaringan perangkap feromon massal.',
+    catatan_verifikasi: 'Puncak serangan TW III.',
+    dibuat_pada: '2026-08-21T03:30:00Z',
+    diverifikasi_oleh: 'usr-op-kutim',
+    diverifikasi_pada: '2026-08-22T05:00:00Z',
+  },
+  {
+    id: 'lap-017',
+    kode: 'SIM-KKR-2026-017',
+    petugas_id: 'usr-popt-01',
+    desa_id: 'desa-batuah',
+    nama_blok: 'Sentra Lada Malonan Batuah Km 28',
+    lat: -0.7251,
+    lng: 117.0518,
+    komoditas_id: 'kom-lada',
+    opt_id: 'opt-bpblada',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 3,
+    semester: 2,
+    luas_amatan: 195,
+    luas_ringan: 44,
+    luas_berat: 62,
+    luas_terkendali: 65,
+    status: 'terverifikasi',
+    rekomendasi_kultur: 'Pembuatan parit isolasi antarblok lada.',
+    rekomendasi_hayati: 'Aplikasi Trichoderma cair di perakaran.',
+    rekomendasi_kimiawi: 'Bubur Bordeaux pada pangkal sulur.',
+    catatan_verifikasi: 'Terverifikasi TW III.',
+    dibuat_pada: '2026-09-14T04:15:00Z',
+    diverifikasi_oleh: 'usr-op-kukar',
+    diverifikasi_pada: '2026-09-15T06:00:00Z',
+  },
+  {
+    id: 'lap-018',
+    kode: 'SIM-KBR-2026-018',
+    petugas_id: 'usr-popt-05',
+    desa_id: 'desa-empaq',
+    nama_blok: 'Poktan Kopi Mandiri Blok Empakuq',
+    lat: -0.2912,
+    lng: 115.8315,
+    komoditas_id: 'kom-kopi',
+    opt_id: 'opt-pbkopi',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 3,
+    semester: 2,
+    luas_amatan: 130,
+    luas_ringan: 25,
+    luas_berat: 12,
+    luas_terkendali: 70,
+    status: 'terverifikasi',
+    rekomendasi_kultur: 'Panen bersih dan sanitasi buah jatuh.',
+    rekomendasi_hayati: 'Beauveria bassiana rutin.',
+    rekomendasi_kimiawi: 'Perangkap atraktan.',
+    catatan_verifikasi: 'Terverifikasi TW III.',
+    dibuat_pada: '2026-07-24T02:30:00Z',
+    diverifikasi_oleh: 'usr-admin-01',
+    diverifikasi_pada: '2026-07-25T03:00:00Z',
+  },
+  {
+    id: 'lap-019',
+    kode: 'SIM-SMD-2026-019',
+    petugas_id: 'usr-popt-09',
+    desa_id: 'desa-bukuan',
+    nama_blok: 'Kebun Kelapa Dalam Bukuan Blok B',
+    lat: -0.5814,
+    lng: 117.1892,
+    komoditas_id: 'kom-kelapa',
+    opt_id: 'opt-brontispa',
+    fase_tanaman: 'tbm',
+    tahun: 2026,
+    triwulan: 4,
+    semester: 2,
+    luas_amatan: 75,
+    luas_ringan: 12,
+    luas_berat: 4,
+    luas_terkendali: 40,
+    status: 'ditolak',
+    rekomendasi_kultur: 'Sanitasi pelepah pucuk kering.',
+    rekomendasi_hayati: 'Aplikasi jamur entomopatogen.',
+    rekomendasi_kimiawi: 'Tanpa kimiawi.',
+    catatan_verifikasi: 'Ditolak (Simulasi): Koordinat blok perlu dikonfirmasi ulang dengan titik pengamatan janur.',
+    dibuat_pada: '2026-10-30T03:15:00Z',
+    diverifikasi_oleh: 'usr-admin-01',
+    diverifikasi_pada: '2026-10-31T02:40:00Z',
+  },
+  {
+    id: 'lap-020',
+    kode: 'SIM-KKR-2026-020',
+    petugas_id: 'usr-popt-01',
+    desa_id: 'desa-loaduri',
+    nama_blok: 'Poktan Lada Harapan Blok Draf',
+    lat: -0.5841,
+    lng: 117.0582,
+    komoditas_id: 'kom-lada',
+    opt_id: 'opt-dasynus',
+    fase_tanaman: 'tm',
+    tahun: 2026,
+    triwulan: 4,
+    semester: 2,
+    luas_amatan: 90,
+    luas_ringan: 15,
+    luas_berat: 5,
+    luas_terkendali: 50,
+    status: 'draf',
+    rekomendasi_kultur: 'Penyiangan gulma sekitar tiang panjat.',
+    rekomendasi_hayati: 'Persiapan Beauveria bassiana.',
+    rekomendasi_kimiawi: 'Belum diterapkan.',
+    catatan_verifikasi: null,
+    dibuat_pada: '2026-11-05T04:10:00Z',
+    diverifikasi_oleh: null,
+    diverifikasi_pada: null,
+  },
+];
+
+export const MOCK_LAPORAN_FOTO: DbLaporanFotoRow[] = [
+  {
+    id: 'foto-001',
+    laporan_id: 'lap-001',
+    nama_berkas: 'simulasi-lada-batuah-1.jpg',
+    path_storage: buatFotoSvgSimulasi('Gejala Busuk Pangkal Batang Lada', -0.7124, 117.0411, '#8B1E24'),
+    geotag_lat: -0.7124,
+    geotag_lng: 117.0411,
+    urutan: 1,
+  },
+  {
+    id: 'foto-002',
+    laporan_id: 'lap-002',
+    nama_berkas: 'simulasi-ganoderma-wahau-1.jpg',
+    path_storage: buatFotoSvgSimulasi('Tubuh Buah Ganoderma pada Pangkal Sawit', 1.0785, 116.8622, '#6E171C'),
+    geotag_lat: 1.0785,
+    geotag_lng: 116.8622,
+    urutan: 1,
+  },
+  {
+    id: 'foto-003',
+    laporan_id: 'lap-004',
+    nama_berkas: 'simulasi-pbk-berau-1.jpg',
+    path_storage: buatFotoSvgSimulasi('Gejala Belang Masak Awal PBK Kakao', 2.1105, 117.5321, '#7C4D12'),
+    geotag_lat: 2.1105,
+    geotag_lng: 117.5321,
+    urutan: 1,
+  },
+];
+
+export const MOCK_NOTIFIKASI: DbNotifikasiRow[] = [
+  {
+    id: 'notif-001',
+    user_id: 'semua',
+    judul: 'Peringatan Eksplosif: Busuk Pangkal Batang Lada (55,6%)',
+    isi: 'Desa Batuah, Kec. Loa Janan (Kab. Kutai Kartanegara) melaporkan serangan berat 68,00 Ha. Segera tinjau rekomendasi eradikasi.',
+    tipe: 'peringatan_eksplosif',
+    dibaca: false,
+    dibuat_pada: '2026-11-05T05:32:00Z',
+    laporan_id: 'lap-001',
+  },
+  {
+    id: 'notif-002',
+    user_id: 'semua',
+    judul: 'Menunggu Validasi: PBK Kakao — Kab. Berau',
+    isi: 'Laporan SIM-BRU-2026-004 dari Desa Sei Bebanir Bangun (53,8% — Berat) menunggu verifikasi Operator UPTD Utara.',
+    tipe: 'menunggu_validasi',
+    dibaca: false,
+    dibuat_pada: '2026-11-03T06:45:00Z',
+    laporan_id: 'lap-004',
+  },
+  {
+    id: 'notif-003',
+    user_id: 'semua',
+    judul: 'Laporan Baru Masuk: Kopi Liberika — Kota Bontang',
+    isi: 'Laporan SIM-BTG-2026-010 di Kel. Kanaan tercatat dengan intensitas 25,9% (Sedang / Waspada).',
+    tipe: 'laporan_baru',
+    dibaca: true,
+    dibuat_pada: '2026-11-02T04:05:00Z',
+    laporan_id: 'lap-010',
+  },
+];

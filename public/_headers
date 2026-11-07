@@ -1,0 +1,23 @@
+# Header keamanan Cloudflare Pages (SECURITY.md §8).
+#
+# WAJIB SEBELUM DEPLOY FASE 2: ganti baris Content-Security-Policy di bawah dengan
+# baris siap-tempel ini, lalu isi <PROJECT_REF> dengan referensi proyek Supabase Anda
+# (Settings > API > Project URL, mis. abcdefghijklmnop). Hanya domain proyek itu,
+# jangan memakai wildcard. Tanpa langkah ini login Supabase akan diblokir CSP.
+#
+#   Content-Security-Policy: default-src 'self'; script-src 'self' https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://maps.googleapis.com https://maps.gstatic.com https://*.googleapis.com https://*.ggpht.com https://<PROJECT_REF>.supabase.co; connect-src 'self' https://maps.googleapis.com https://<PROJECT_REF>.supabase.co wss://<PROJECT_REF>.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(self), camera=(), microphone=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://maps.googleapis.com https://maps.gstatic.com https://*.googleapis.com https://*.ggpht.com; connect-src 'self' https://maps.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+
+# Aset ber-hash dari Vite aman disimpan lama oleh peramban.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML harus selalu diperiksa ulang agar rilis baru langsung terpakai.
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate

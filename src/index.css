@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --token-brand-900: #0B4A22;
+    --token-brand-700: #116B31;
+    --token-brand-100: #DCF2E3;
+    --token-gold-500: #F5B800;
+    --token-gold-100: #FFF3CC;
+    --token-danger-600: #C8161D;
+    --token-danger-100: #FDE3E3;
+    --token-ok-500: #2E9E57;
+    --token-ok-100: #DDF5E5;
+    --token-info-100: #E3ECFB;
+    --token-surface: #FFFFFF;
+    --token-canvas: #F3F5FA;
+    --token-ink-900: #111827;
+    --token-ink-600: #4B5563;
+    --token-line: #E5E7EB;
+  }
+
+  html {
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-700;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
