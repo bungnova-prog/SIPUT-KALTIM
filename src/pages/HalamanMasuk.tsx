@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../lib/storeAplikasi';
 import { authService } from '../services';
+import logoKaltim from '../assets/logo-kaltim.png';
 
 export default function HalamanMasuk() {
   const navigate = useNavigate();
@@ -82,9 +83,9 @@ export default function HalamanMasuk() {
             <div>
               <div className="flex items-center gap-3">
                 <img
-                  src="/logo-kaltim.png"
+                  src={logoKaltim}
                   alt="Logo Pemprov Kalimantan Timur Ruhui Rahayu"
-                  className="h-12 w-auto shrink-0 object-contain drop-shadow"
+                  className="h-14 w-auto shrink-0 object-contain drop-shadow"
                 />
                 <div>
                   <div className="flex items-center gap-2">
@@ -100,7 +101,7 @@ export default function HalamanMasuk() {
               </div>
 
               <h1 className="mt-6 text-2xl font-extrabold leading-snug sm:text-3xl">
-                Sistem Informasi Proteksi Tanaman Perkebunan
+                Sistem Informasi Pelaporan OPT
               </h1>
               <p className="mt-2.5 text-xs leading-relaxed text-brand-100 sm:text-sm">
                 Pemantauan, pemetaan geospasial WGS 84, dan rekapitulasi serangan Organisme
@@ -132,8 +133,7 @@ export default function HalamanMasuk() {
                 Masuk ke Akun Petugas / Pejabat
               </h2>
               <p className="mt-1 text-xs text-ink-600 sm:text-sm">
-                Gunakan alamat email dinas dan kata sandi yang terdaftar melalui undangan Admin
-                Provinsi.
+                Gunakan alamat email dinas dan kata sandi yang didaftarkan oleh Admin Provinsi.
               </p>
             </div>
 
@@ -287,8 +287,7 @@ export default function HalamanMasuk() {
               <p className="font-semibold text-ink-900">Kebijakan Pendaftaran Akun</p>
               <p className="mt-0.5 leading-relaxed">
                 Pendaftaran mandiri ditutup untuk menjaga keamanan data proteksi perkebunan.
-                Hubungi Admin Provinsi Dinas Perkebunan Kalimantan Timur untuk penerbitan undangan
-                akun resmi.
+                Hubungi Admin Provinsi Dinas Perkebunan Kalimantan Timur untuk pendaftaran akun resmi.
               </p>
             </div>
           </section>

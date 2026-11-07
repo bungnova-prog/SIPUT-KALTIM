@@ -49,6 +49,7 @@ export default function HalamanPengguna() {
   // Form Undang Pengguna Baru (Khusus Admin melalui Edge Function — SECURITY.md §5.3)
   const [bukaFormTambah, setBukaFormTambah] = useState(false);
   const [emailBaru, setEmailBaru] = useState('');
+  const [kataSandiBaru, setKataSandiBaru] = useState('PoptKaltim2026!');
   const [namaBaru, setNamaBaru] = useState('');
   const [nipBaru, setNipBaru] = useState('');
   const [jabatanBaru, setJabatanBaru] = useState('');
@@ -92,6 +93,7 @@ export default function HalamanPengguna() {
     const hasil = await penggunaRepository.tambahSimulasi(
       {
         email: emailBaru,
+        kataSandi: kataSandiBaru,
         nama: namaBaru,
         nip: nipBaru,
         jabatan: jabatanBaru,
@@ -106,13 +108,14 @@ export default function HalamanPengguna() {
     if (!hasil.ok) {
       tambahToast({
         jenis: 'gagal',
-        judul: 'Gagal Mengundang Pengguna',
+        judul: 'Gagal Menyimpan Pengguna',
         pesan: hasil.pesan,
       });
       return;
     }
 
     setEmailBaru('');
+    setKataSandiBaru('PoptKaltim2026!');
     setNamaBaru('');
     setNipBaru('');
     setJabatanBaru('');
@@ -120,8 +123,8 @@ export default function HalamanPengguna() {
     setBukaFormTambah(false);
     tambahToast({
       jenis: 'sukses',
-      judul: 'Undangan Akun Terkirim',
-      pesan: `${hasil.data.nama} (${hasil.data.peran.toUpperCase()}) telah diundang dan terdaftar.`,
+      judul: 'Akun Pengguna Berhasil Disimpan',
+      pesan: `${hasil.data.nama} (${hasil.data.peran.toUpperCase()}) telah terdaftar dan siap digunakan untuk masuk.`,
     });
   };
 
@@ -180,7 +183,7 @@ export default function HalamanPengguna() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-brand-900">
-              Otorisasi RLS &amp; Edge Function
+              Otorisasi RLS &amp; Akun Resmi
             </span>
             <h1 className="mt-1.5 text-xl font-extrabold text-brand-900 sm:text-2xl">
               Manajemen Pengguna &amp; Konfigurasi Ambang Proteksi
@@ -198,7 +201,7 @@ export default function HalamanPengguna() {
               className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-900 px-4 py-2.5 text-xs font-bold text-surface hover:bg-brand-700"
             >
               <UserPlus className="h-4 w-4 shrink-0" aria-hidden />
-              <span>{bukaFormTambah ? 'Tutup Form Undangan' : 'Undang Pengguna Baru'}</span>
+              <span>{bukaFormTambah ? 'Tutup Form' : 'Tambah Pengguna Baru'}</span>
             </button>
           )}
         </div>
@@ -226,7 +229,7 @@ export default function HalamanPengguna() {
             className="mt-5 space-y-4 rounded-xl border border-brand-700/25 bg-brand-100/35 p-4"
           >
             <h2 className="text-sm font-bold text-brand-900">
-              Undang Akun Pengguna Resmi Baru (Melalui Edge Function Server)
+              Tambah & Daftarkan Akun Pengguna Langsung
             </h2>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <div>
@@ -360,6 +363,27 @@ export default function HalamanPengguna() {
                   className="mt-1 min-h-[44px] w-full rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink-900"
                 />
               </div>
+
+              <div>
+                <label
+                  htmlFor="input-usr-sandi"
+                  className="block text-xs font-bold text-ink-900"
+                >
+                  Kata Sandi Akun Petugas <span className="text-danger-600">*</span>
+                </label>
+                <input
+                  id="input-usr-sandi"
+                  type="text"
+                  required
+                  value={kataSandiBaru}
+                  onChange={(e) => setKataSandiBaru(e.target.value)}
+                  placeholder="Minimal 6 karakter"
+                  className="mt-1 min-h-[44px] w-full rounded-xl border border-line bg-surface px-3 py-2 font-mono text-xs text-ink-900"
+                />
+                <p className="mt-1 text-[11px] text-ink-600">
+                  Kata sandi ini digunakan petugas untuk masuk ke aplikasi.
+                </p>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2">
@@ -375,7 +399,7 @@ export default function HalamanPengguna() {
                 disabled={sedangMenambah}
                 className="min-h-[44px] rounded-xl bg-brand-900 px-4 py-2 text-xs font-bold text-surface hover:bg-brand-700 disabled:opacity-60"
               >
-                {sedangMenambah ? 'Mengirim Undangan...' : 'Kirim Undangan Akun'}
+                {sedangMenambah ? 'Menyimpan Akun...' : 'Simpan Akun Pengguna'}
               </button>
             </div>
           </form>

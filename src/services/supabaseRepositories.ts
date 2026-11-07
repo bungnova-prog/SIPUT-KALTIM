@@ -66,6 +66,7 @@ import type {
 } from './kontrak';
 import { hapusDrafLokalForm } from '../lib/drafLokal';
 import { ambilKlienSupabase, apakahKonfigurasiSupabaseLengkap } from './klienSupabase';
+import { createClient } from '@supabase/supabase-js';
 
 const BUCKET_FOTO_LAPORAN = 'laporan-foto';
 const DURASI_URL_BERTANDA_TANGAN_DETIK = 3600;
@@ -1926,46 +1927,107 @@ export const penggunaRepository: PenggunaRepository = {
         wilayahRepository.semuaWilayah(),
       ]);
 
-      const { data, error } = await klien.functions.invoke<{
-        ok: boolean;
-        pesan?: string;
-        data?: BarisDbProfil;
-      }>('undang-pengguna', {
-        body: {
-          email,
-          nama: input.nama.trim(),
-          nip: input.nip.trim() || null,
-          jabatan: input.jabatan.trim(),
-          peran: input.peran,
-          wilayahId: input.peran === 'admin' ? null : input.wilayahId,
-          wkpp: input.wkpp.trim(),
-        },
-      });
+      const kataSandi = (input.kataSandi ?? '').trim() || 'PoptKaltim2026!';
+      const url = String(import.meta.env.VITE_SUPABASE_URL ?? '').trim();
+      const anonKey = String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim();
 
-      if (error) {
+      let userId: string | null = null;
+
+      // 1. Daftarkan akun baru ke auth.users memakai klien pendaftaran sekunder
+      // agar sesi aktif Admin yang sedang login tidak tertimpa/terputus.
+      if (url && anonKey) {
+        try {
+          const klienDaftar = createClient(url, anonKey, {
+            auth: {
+              persistSession: false,
+              autoRefreshToken: false,
+              detectSessionInUrl: false,
+            },
+          });
+
+          const { data: authData, error: authGalat } = await klienDaftar.auth.signUp({
+            email,
+            password: kataSandi,
+            options: {
+              data: {
+                nama: input.nama.trim(),
+                nip: input.nip.trim() || null,
+              },
+            },
+          });
+
+          if (!authGalat && authData?.user?.id) {
+            userId = authData.user.id;
+          } else if (authGalat?.message?.toLowerCase().includes('already registered')) {
+            // Periksa apakah pengguna dengan NIP ini sudah ada di profiles
+            if (input.nip.trim()) {
+              const { data: profilAda } = await klien
+                .from('profiles')
+                .select('id')
+                .eq('nip', input.nip.trim())
+                .maybeSingle();
+
+              if (profilAda) {
+                return {
+                  ok: false,
+                  pesan: 'Pengguna dengan NIP ini sudah terdaftar di sistem.',
+                };
+              }
+            }
+          } else if (authGalat) {
+            return {
+              ok: false,
+              pesan: terjemahkanGalat(
+                authGalat,
+                'Gagal mendaftarkan akun autentikasi pengguna baru. Pastikan kata sandi minimal 6 karakter.'
+              ),
+            };
+          }
+        } catch (errAuth) {
+          return {
+            ok: false,
+            pesan: terjemahkanGalat(errAuth, 'Gagal menghubungkan pendaftaran autentikasi.'),
+          };
+        }
+      }
+
+      const idProfilFinal = userId ?? crypto.randomUUID();
+
+      // 2. Simpan profil lengkap ke tabel public.profiles dengan hak Admin
+      const barisInput = {
+        id: idProfilFinal,
+        nama: input.nama.trim(),
+        nip: input.nip.trim() || null,
+        jabatan: input.jabatan.trim() || (input.peran === 'petugas' ? 'Petugas Lapangan' : 'Operator UPTD'),
+        peran: input.peran,
+        wilayah_id: input.peran === 'admin' ? null : input.wilayahId,
+        wkpp: input.wkpp.trim() || 'Wilayah Kerja',
+        aktif: true,
+      };
+
+      const { data: barisProfilBaru, error: galatProfil } = await klien
+        .from('profiles')
+        .upsert(barisInput, { onConflict: 'id' })
+        .select()
+        .single<BarisDbProfil>();
+
+      if (galatProfil) {
         return {
           ok: false,
           pesan: terjemahkanGalat(
-            error,
-            'Gagal memanggil Edge Function undang-pengguna. Pastikan fungsi telah dideploy pada Supabase.'
+            galatProfil,
+            'Gagal menyimpan profil pengguna ke tabel profiles basis data.'
           ),
-        };
-      }
-
-      if (!data?.ok || !data.data) {
-        return {
-          ok: false,
-          pesan: data?.pesan ?? 'Undangan pengguna ditolak oleh layanan Edge Function.',
         };
       }
 
       pelangganLokalPengguna.forEach((cb) => cb());
       const daftarWilayah = wilHasil.ok ? wilHasil.data : [];
-      return { ok: true, data: petakanProfil(data.data, daftarWilayah) };
+      return { ok: true, data: petakanProfil(barisProfilBaru, daftarWilayah) };
     } catch (err) {
       return {
         ok: false,
-        pesan: terjemahkanGalat(err, 'Gagal mengirim undangan akun pengguna.'),
+        pesan: terjemahkanGalat(err, 'Gagal menyimpan data akun pengguna.'),
       };
     }
   },

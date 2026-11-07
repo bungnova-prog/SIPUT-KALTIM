@@ -30,6 +30,7 @@ import {
 } from '../lib/format';
 import { notifikasiRepository } from '../services';
 import type { NotifikasiItem, Peran, TipeNotifikasi } from '../types/domain';
+import logoKaltim from '../assets/logo-kaltim.png';
 
 const menuNavigasi: Array<{
   to: string;
@@ -206,9 +207,9 @@ export default function TataLetakUtama() {
               <Menu className="h-5 w-5" aria-hidden />
             </button>
             <img
-              src="/logo-kaltim.png"
+              src={logoKaltim}
               alt="Logo Pemprov Kalimantan Timur Ruhui Rahayu"
-              className="h-10 w-auto shrink-0 object-contain"
+              className="h-10 w-auto shrink-0 object-contain drop-shadow-sm"
             />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
@@ -459,9 +460,16 @@ export default function TataLetakUtama() {
             />
             <aside className="absolute left-0 top-0 flex h-full w-[280px] max-w-[85vw] flex-col overflow-y-auto bg-surface p-4">
               <div className="mb-4 flex items-center justify-between border-b border-line pb-3">
-                <div>
-                  <p className="text-sm font-bold text-brand-900">Navigasi SIPUT</p>
-                  <p className="text-xs text-ink-600">{profilAktif.nama}</p>
+                <div className="flex items-center gap-2 min-w-0">
+                  <img
+                    src={logoKaltim}
+                    alt="Logo Pemprov Kalimantan Timur Ruhui Rahayu"
+                    className="h-8 w-auto shrink-0 object-contain drop-shadow-sm"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-brand-900">SIPUT-KALTIM</p>
+                    <p className="text-xs text-ink-600 truncate">{profilAktif.nama}</p>
+                  </div>
                 </div>
                 <button
                   type="button"

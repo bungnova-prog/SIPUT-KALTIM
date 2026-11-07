@@ -49,7 +49,7 @@ export function unduhExcelLaporan(
 ): string {
   const barisHeaderInfo = [
     ['DOKUMEN DATA SIMULASI — BUKAN DATA RESMI PEMPROV KALTIM'],
-    ['Sistem Informasi Proteksi Tanaman Perkebunan (SIPUT-KALTIM) — Fase 1'],
+    ['Sistem Informasi Pelaporan OPT (SIPUT-KALTIM)'],
     [`Filter Aktif: ${netralkanSelExcel(filterRingkas)}`],
     [`Diunduh Oleh: ${netralkanSelExcel(peminta.nama)} (${peminta.peran.toUpperCase()})`],
     [`Waktu Unduh: ${formatTanggalWaktu(new Date())}`],

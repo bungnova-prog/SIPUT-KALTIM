@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Sistem Informasi Proteksi Tanaman Perkebunan Provinsi Kalimantan Timur",
+  "description": "Sistem Informasi Pelaporan OPT Provinsi Kalimantan Timur",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

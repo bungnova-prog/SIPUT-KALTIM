@@ -119,6 +119,7 @@ export interface PenggunaRepository {
   tambahSimulasi(
     input: {
       email?: string;
+      kataSandi?: string;
       nama: string;
       nip: string;
       jabatan: string;
