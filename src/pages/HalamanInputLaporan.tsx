@@ -661,8 +661,8 @@ export default function HalamanInputLaporan() {
       }
       tambahToast({
         jenis: 'sukses',
-        judul: 'Desa Tersimpan',
-        pesan: `Desa/Kelurahan ${namaBersih} berhasil didaftarkan.`,
+        judul: 'Kampung/Desa Tersimpan',
+        pesan: `Kampung/Desa/Kelurahan ${namaBersih} berhasil didaftarkan.`,
       });
       setBukaModalTambahDesa(false);
       setNamaDesaBaru('');
@@ -1380,14 +1380,14 @@ export default function HalamanInputLaporan() {
                   )}
                 </div>
 
-                {/* Desa / Kelurahan */}
+                {/* Kampung / Desa / Kelurahan */}
                 <div>
                   <div className="flex items-center justify-between">
                     <label
                       htmlFor="input-desa"
                       className="block text-xs font-bold uppercase tracking-wider text-ink-900"
                     >
-                      Desa / Kelurahan <span className="text-danger-600">*</span>
+                      Kampung / Desa / Kelurahan <span className="text-danger-600">*</span>
                     </label>
                     <button
                       type="button"
@@ -1408,9 +1408,7 @@ export default function HalamanInputLaporan() {
                     onChange={(e) => tanganiPilihDesa(e.target.value)}
                     className="mt-1.5 min-h-[44px] w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium text-ink-900 focus:border-brand-700"
                   >
-                    {daftarDesa.length === 0 && (
-                      <option value="">-- Pilih Desa/Kelurahan --</option>
-                    )}
+                    <option value="">-- Pilih Kampung / Desa / Kelurahan --</option>
                     {daftarDesa.map((desa) => (
                       <option key={desa.id} value={desa.id}>
                         {desa.nama}
@@ -1421,6 +1419,23 @@ export default function HalamanInputLaporan() {
                     <p role="alert" className="mt-1 text-xs font-semibold text-danger-600">
                       {errors.desaId.message}
                     </p>
+                  )}
+                  {nilaiForm.kecamatanId && daftarDesa.length === 0 && (
+                    <div className="mt-2 flex items-center justify-between rounded-xl border border-brand-200 bg-brand-50 p-2.5 text-xs text-brand-900">
+                      <span>Belum ada data kampung/desa pada kecamatan ini.</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGalatDesaBaru(null);
+                          setNamaDesaBaru('');
+                          setBukaModalTambahDesa(true);
+                        }}
+                        className="inline-flex items-center gap-1 font-bold text-brand-700 underline hover:text-brand-900"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Tambah Sekarang
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -2050,7 +2065,7 @@ export default function HalamanInputLaporan() {
         </div>
       )}
 
-      {/* MODAL TAMBAH DESA */}
+      {/* MODAL TAMBAH KAMPUNG / DESA */}
       {bukaModalTambahDesa && (
         <div
           role="dialog"
@@ -2061,7 +2076,7 @@ export default function HalamanInputLaporan() {
           <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-xl">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 id="judul-modal-desa" className="text-base font-bold text-ink-900">
-                Tambah Desa / Kelurahan Baru
+                Tambah Kampung / Desa / Kelurahan Baru
               </h3>
               <button
                 type="button"
@@ -2087,13 +2102,13 @@ export default function HalamanInputLaporan() {
                   htmlFor="input-nama-desa-baru"
                   className="block text-xs font-bold uppercase tracking-wider text-ink-900"
                 >
-                  Nama Desa / Kelurahan <span className="text-danger-600">*</span>
+                  Nama Kampung / Desa / Kelurahan <span className="text-danger-600">*</span>
                 </label>
                 <input
                   id="input-nama-desa-baru"
                   type="text"
                   required
-                  placeholder="Contoh: Desa Makmur Sejahtera"
+                  placeholder="Contoh: Kampung Mencimai / Desa Harapan / Kelurahan Klandasan"
                   value={namaDesaBaru}
                   onChange={(e) => setNamaDesaBaru(e.target.value)}
                   className="mt-1.5 min-h-[44px] w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink-900 focus:border-brand-700"
@@ -2118,7 +2133,7 @@ export default function HalamanInputLaporan() {
                   disabled={sedangSimpanDesa || !namaDesaBaru.trim()}
                   className="min-h-[40px] rounded-xl bg-brand-900 px-5 py-2 text-xs font-bold text-surface hover:bg-brand-700 disabled:opacity-50"
                 >
-                  {sedangSimpanDesa ? 'Menyimpan...' : 'Simpan Desa'}
+                  {sedangSimpanDesa ? 'Menyimpan...' : 'Simpan Data'}
                 </button>
               </div>
             </form>
