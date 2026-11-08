@@ -1,7 +1,9 @@
 import {
   CheckCircle2,
+  Database,
   KeyRound,
   Power,
+  RefreshCw,
   ShieldAlert,
   Sliders,
   Trash2,
@@ -28,6 +30,8 @@ import {
   penggunaRepository,
   wilayahRepository,
 } from '../services';
+import { sinkronkanMasterWilayahKeSupabase } from '../services/supabaseRepositories';
+import { apakahKonfigurasiSupabaseLengkap } from '../services/klienSupabase';
 import type {
   KonfigurasiSistem,
   Peran,
@@ -67,6 +71,10 @@ export default function HalamanPengguna() {
   const [penggunaMauDihapus, setPenggunaMauDihapus] = useState<ProfilPengguna | null>(null);
   const [sedangMenghapus, setSedangMenghapus] = useState(false);
   const [modalGantiSandiBuka, setModalGantiSandiBuka] = useState(false);
+
+  // Sinkronisasi Wilayah Kemendagri ke Supabase
+  const [sedangSinkronWilayah, setSedangSinkronWilayah] = useState(false);
+  const [progresSinkron, setProgresSinkron] = useState<string | null>(null);
 
   const muatData = useCallback(() => {
     setMemuat(true);
@@ -207,6 +215,46 @@ export default function HalamanPengguna() {
       judul: 'Konfigurasi Ambang Diperbarui',
       pesan: 'Klasifikasi tingkat serangan GIS dan peringatan dini formulir telah disinkronkan.',
     });
+  };
+
+  const tanganiSinkronisasiWilayah = async () => {
+    if (!apakahKonfigurasiSupabaseLengkap()) {
+      tambahToast({
+        jenis: 'sukses',
+        judul: 'Data Master 1.012 Desa Aktif',
+        pesan:
+          'Sistem berjalan dalam mode simulasi. Seluruh 1.012+ desa se-Kaltim sudah aktif di memori aplikasi.',
+      });
+      return;
+    }
+
+    setSedangSinkronWilayah(true);
+    setProgresSinkron('Menghubungkan dan memeriksa tabel wilayah Supabase...');
+
+    const res = await sinkronkanMasterWilayahKeSupabase((_selesai, _total, pesan) => {
+      setProgresSinkron(pesan);
+    });
+
+    setSedangSinkronWilayah(false);
+    setProgresSinkron(null);
+
+    if (res.ok) {
+      tambahToast({
+        jenis: 'sukses',
+        judul: 'Sinkronisasi Wilayah Berhasil',
+        pesan:
+          res.data.totalTersinkron > 0
+            ? `${res.data.totalTersinkron} data desa/kelurahan berhasil disinkronkan ke basis data Supabase!`
+            : 'Seluruh 1.012+ desa/kelurahan sudah lengkap dan mutakhir di basis data Supabase.',
+      });
+      muatData();
+    } else {
+      tambahToast({
+        jenis: 'gagal',
+        judul: 'Sinkronisasi Terkendala',
+        pesan: res.pesan,
+      });
+    }
   };
 
   return (
@@ -689,6 +737,55 @@ export default function HalamanPengguna() {
               </>
             )}
           </section>
+
+          {/* Sinkronisasi Master Wilayah Kemendagri */}
+          {profilAktif.peran === 'admin' && (
+            <section
+              aria-labelledby="judul-sinkron-wilayah"
+              className="rounded-2xl border border-line bg-surface p-4 sm:p-6"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-line pb-3.5">
+                <div className="flex items-start gap-2.5">
+                  <Database className="mt-0.5 h-5 w-5 shrink-0 text-brand-900" aria-hidden />
+                  <div>
+                    <h2
+                      id="judul-sinkron-wilayah"
+                      className="text-base font-bold text-ink-900 sm:text-lg"
+                    >
+                      Master Data Wilayah Kemendagri (10 Kab/Kota, 105 Kec, 1.012+ Desa)
+                    </h2>
+                    <p className="mt-0.5 text-xs text-ink-600">
+                      Seluruh 10 Kabupaten/Kota, 105 Kecamatan, dan 1.012+ Kampung/Desa/Kelurahan telah aktif di formulir &amp; dropdown. Anda dapat menyinkronkan seluruhnya ke basis data Supabase via API tanpa perlu query SQL manual.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={sedangSinkronWilayah}
+                  onClick={() => {
+                    void tanganiSinkronisasiWilayah();
+                  }}
+                  className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-900 px-4 py-2.5 text-xs font-bold text-surface hover:bg-brand-700 disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 shrink-0 ${sedangSinkronWilayah ? 'animate-spin' : ''}`}
+                    aria-hidden
+                  />
+                  <span>
+                    {sedangSinkronWilayah ? 'Menyinkronkan...' : 'Sinkronkan ke Database Supabase'}
+                  </span>
+                </button>
+              </div>
+
+              {progresSinkron && (
+                <div className="mt-3 flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 p-3 text-xs font-semibold text-brand-900">
+                  <RefreshCw className="h-4 w-4 shrink-0 animate-spin text-brand-900" />
+                  <span>{progresSinkron}</span>
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Konfigurasi Ambang Terpusat (GIS vs Peringatan Dini Formulir Terpisah — AGENTS.md §8) */}
           {profilAktif.peran === 'admin' && (

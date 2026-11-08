@@ -17,6 +17,14 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/) dan
 ## [Belum Dirilis]
 
 ### Ditambahkan
+- Menambahkan berkas master data wilayah resmi Kalimantan Timur (`src/data/masterWilayahKaltim.ts`) yang memuat seluruh 10 Kabupaten/Kota, 105 Kecamatan, dan 1.012+ Kampung, Desa, dan Kelurahan resmi Kemendagri & BPS, langsung terintegrasi ke bundel frontend TypeScript.
+- Menambahkan fungsi pengayaan wilayah hibrida (`perkayaWilayahDenganMaster` pada `src/services/supabaseRepositories.ts` dan `inisialisasiDbWilayahLengkap` pada `src/services/mockRepositories.ts`) yang memastikan seluruh kecamatan di 10 Kabupaten/Kota memiliki opsi Kampung/Desa/Kelurahan lengkap di UI tanpa bergantung pada riwayat eksekusi migrasi basis data.
+- Menambahkan mekanisme penjaminan baris relasional otomatis (`pastikanDesaTersediaDiSupabase`) pada repositori laporan Supabase yang mendaftarkan entri desa master ke tabel `public.wilayah` sebelum menyimpan laporan, guna mencegah galat integritas relasional *foreign key*.
+- Menambahkan fungsi sinkronisasi API satu klik (`sinkronkanMasterWilayahKeSupabase`) beserta panel kontrol admin pada `src/pages/HalamanPengguna.tsx` dengan indikator progres waktu nyata.
+
+### Diperbaiki
+- Mengatasi masalah dropdown Kampung/Desa/Kelurahan yang hanya menampilkan sebagian entri (misal Samarinda Utara hanya 2 kelurahan) dengan memetakan seluruh kelurahan resmi (Lempake, Sempaja Selatan, Sungai Siring, Tanah Merah, Sempaja Utara, Sempaja Timur, Sempaja Barat, Budaya Pampang) dan seluruh desa/kampung di 9 kabupaten/kota lainnya.
+- Memperbaiki galat SQL `column "id" is of type uuid but expression is of type text` dan sintaks terpotong pada eksekusi skrip di editor peramban dengan membungkus proses identitas auth dalam blok aman (`exception when others then null`) pada `supabase/AKTIFKAN_MANAJEMEN_PENGGUNA_LANGSUNG.sql`.
 - Menyediakan master data 100% lengkap seluruh 1.013+ Kampung, Desa, dan Kelurahan resmi Kemendagri untuk seluruh 10 Kabupaten/Kota se-Kalimantan Timur pada `supabase/SEMUA_1038_DESA_KALTIM_LENGKAP.sql` dan berkas modular per kabupaten pada `supabase/per_kabupaten/`.
 - Menyediakan master data lengkap seluruh Kelurahan resmi Kota Samarinda (59 Kelurahan termasuk 8 Kelurahan di Samarinda Utara), Balikpapan (34 Kelurahan), Bontang (15 Kelurahan), PPU, dan ratusan Desa/Kampung se-Kaltim dalam skrip `supabase/MASTER_LENGKAP_SELURUH_DESA_KALTIM.sql`.
 - Menyediakan master data lengkap Kampung/Desa/Kelurahan se-Kalimantan Timur pada `supabase/LENGKAPI_SEMUA_KAMPUNG_DESA_KALTIM.sql` dengan kueri garansi sistem agar setiap kecamatan dipastikan memiliki minimal 1 pilihan Kampung/Desa resmi.

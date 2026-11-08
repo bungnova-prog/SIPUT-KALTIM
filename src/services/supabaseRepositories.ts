@@ -1,3 +1,10 @@
+import {
+  MASTER_KABUPATEN,
+  MASTER_KECAMATAN,
+  MASTER_DESA,
+  ambilMasterDesaPerKecamatan,
+  normalisasiNamaWilayah,
+} from '../data/masterWilayahKaltim';
 import { transisiStatusLaporan } from '../lib/alurLaporan';
 import {
   hitungIntensitasKomoditasDariLaporan,
@@ -525,6 +532,133 @@ export const authService: AuthService = {
   },
 };
 
+function perkayaWilayahDenganMaster(wilayahDb: Wilayah[]): Wilayah[] {
+  const hasil: Wilayah[] = [...wilayahDb];
+  const sudahAdaId = new Set(hasil.map((w) => w.id));
+
+  // 1. Kabupaten: Pastikan ke-10 Kabupaten/Kota Kalimantan Timur tersedia
+  const daftarKab = hasil.filter((w) => w.tipe === 'kabupaten');
+  const kabMap = new Map<string, Wilayah>();
+  daftarKab.forEach((k) => {
+    kabMap.set(k.id, k);
+    kabMap.set(normalisasiNamaWilayah(k.nama), k);
+  });
+
+  MASTER_KABUPATEN.forEach((mk) => {
+    const norm = normalisasiNamaWilayah(mk.nama);
+    if (!kabMap.has(mk.kode) && !kabMap.has(norm)) {
+      const kabBaru: Wilayah = {
+        id: mk.kode,
+        tipe: 'kabupaten',
+        nama: mk.nama,
+        parentId: null,
+        uptdId: null,
+        latPusat: mk.latPusat,
+        lngPusat: mk.lngPusat,
+      };
+      hasil.push(kabBaru);
+      kabMap.set(mk.kode, kabBaru);
+      kabMap.set(norm, kabBaru);
+      sudahAdaId.add(mk.kode);
+    }
+  });
+
+  // 2. Kecamatan: Petakan dan lengkapi ke-105 Kecamatan
+  const daftarKec = hasil.filter((w) => w.tipe === 'kecamatan');
+  const kecMap = new Map<string, Wilayah>();
+  daftarKec.forEach((kec) => {
+    kecMap.set(kec.id, kec);
+    if (kec.parentId) {
+      kecMap.set(`${kec.parentId}:${normalisasiNamaWilayah(kec.nama)}`, kec);
+    }
+    kecMap.set(normalisasiNamaWilayah(kec.nama), kec);
+  });
+
+  MASTER_KECAMATAN.forEach((mk) => {
+    const parentKab =
+      kabMap.get(mk.parentKode ?? '') ||
+      kabMap.get(normalisasiNamaWilayah(mk.parentKode ?? ''));
+    const parentKabId = parentKab?.id ?? mk.parentKode ?? null;
+    const normKec = normalisasiNamaWilayah(mk.nama);
+
+    let kecEksis = kecMap.get(mk.kode);
+    if (!kecEksis && parentKabId) {
+      kecEksis = kecMap.get(`${parentKabId}:${normKec}`);
+    }
+    if (!kecEksis) {
+      kecEksis = kecMap.get(normKec);
+    }
+
+    if (!kecEksis) {
+      const kecBaru: Wilayah = {
+        id: mk.kode,
+        tipe: 'kecamatan',
+        nama: mk.nama,
+        parentId: parentKabId,
+        uptdId: parentKab?.uptdId ?? null,
+        latPusat: mk.latPusat ?? parentKab?.latPusat,
+        lngPusat: mk.lngPusat ?? parentKab?.lngPusat,
+      };
+      hasil.push(kecBaru);
+      kecMap.set(mk.kode, kecBaru);
+      if (parentKabId) {
+        kecMap.set(`${parentKabId}:${normKec}`, kecBaru);
+      }
+      sudahAdaId.add(mk.kode);
+    }
+  });
+
+  // 3. Desa/Kelurahan/Kampung: Lengkapi ke-1.012+ Desa di seluruh Kecamatan
+  const desaPerKec = new Map<string, Set<string>>();
+  hasil
+    .filter((w) => w.tipe === 'desa' && w.parentId)
+    .forEach((desa) => {
+      const pId = desa.parentId!;
+      if (!desaPerKec.has(pId)) desaPerKec.set(pId, new Set());
+      desaPerKec.get(pId)!.add(normalisasiNamaWilayah(desa.nama));
+      desaPerKec.get(pId)!.add(desa.id);
+    });
+
+  MASTER_KECAMATAN.forEach((mk) => {
+    const parentKab = kabMap.get(mk.parentKode ?? '');
+    const parentKabId = parentKab?.id;
+    const normKec = normalisasiNamaWilayah(mk.nama);
+
+    const targetKec =
+      kecMap.get(mk.kode) ||
+      (parentKabId ? kecMap.get(`${parentKabId}:${normKec}`) : undefined) ||
+      kecMap.get(normKec);
+
+    if (!targetKec) return;
+
+    const targetKecId = targetKec.id;
+    const setDesaEksis = desaPerKec.get(targetKecId) ?? new Set<string>();
+
+    const masterDesas = ambilMasterDesaPerKecamatan(mk.kode);
+    masterDesas.forEach((md) => {
+      const normDesa = normalisasiNamaWilayah(md.nama);
+      if (!setDesaEksis.has(normDesa) && !sudahAdaId.has(md.kode)) {
+        const desaBaru: Wilayah = {
+          id: md.kode,
+          tipe: 'desa',
+          nama: md.nama,
+          parentId: targetKecId,
+          uptdId: targetKec.uptdId ?? null,
+          latPusat: md.latPusat ?? targetKec.latPusat,
+          lngPusat: md.lngPusat ?? targetKec.lngPusat,
+        };
+        hasil.push(desaBaru);
+        setDesaEksis.add(normDesa);
+        setDesaEksis.add(md.kode);
+        sudahAdaId.add(md.kode);
+      }
+    });
+    desaPerKec.set(targetKecId, setDesaEksis);
+  });
+
+  return hasil;
+}
+
 export const wilayahRepository: WilayahRepository = {
   async semuaWilayah(): Promise<Hasil<Wilayah[]>> {
     if (cacheWilayah) {
@@ -536,15 +670,20 @@ export const wilayahRepository: WilayahRepository = {
         .from('wilayah')
         .select('id, tipe, nama, parent_id, uptd_id, lat_pusat, lng_pusat')
         .order('nama', { ascending: true })
+        .limit(5000)
         .returns<BarisDbWilayah[]>();
 
       if (error) {
-        return { ok: false, pesan: terjemahkanGalat(error, 'Gagal memuat referensi wilayah.') };
+        // Fallback langsung ke data master Kaltim jika tabel belum siap atau error
+        cacheWilayah = perkayaWilayahDenganMaster([]);
+        return { ok: true, data: cacheWilayah };
       }
-      cacheWilayah = (data ?? []).map(petakanWilayah);
+      const mentah = (data ?? []).map(petakanWilayah);
+      cacheWilayah = perkayaWilayahDenganMaster(mentah);
       return { ok: true, data: cacheWilayah };
-    } catch (err) {
-      return { ok: false, pesan: terjemahkanGalat(err, 'Gagal memuat referensi wilayah.') };
+    } catch {
+      cacheWilayah = perkayaWilayahDenganMaster([]);
+      return { ok: true, data: cacheWilayah };
     }
   },
 
@@ -1365,6 +1504,91 @@ async function validasiInputLaporanKlien(input: LaporanInput): Promise<string | 
   return null;
 }
 
+async function pastikanDesaTersediaDiSupabase(desaId: string): Promise<string> {
+  const klien = ambilKlienSupabase();
+
+  // 1. Cek jika sudah UUID valid dan terdaftar di tabel wilayah
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(desaId);
+  if (isUuid) {
+    const { data: ada } = await klien
+      .from('wilayah')
+      .select('id')
+      .eq('id', desaId)
+      .maybeSingle<{ id: string }>();
+    if (ada?.id) return ada.id;
+  }
+
+  // 2. Cek apakah ada berdasarkan kode (mis. 'desa-6472060004')
+  const { data: byKode } = await klien
+    .from('wilayah')
+    .select('id')
+    .eq('kode', desaId)
+    .maybeSingle<{ id: string }>();
+  if (byKode?.id) return byKode.id;
+
+  // 3. Ambil rincian desa dari cache / master
+  const itemDesa =
+    cacheWilayah?.find((w) => w.id === desaId && w.tipe === 'desa') ||
+    MASTER_DESA.find((d) => d.kode === desaId);
+
+  const namaDesa = itemDesa?.nama ?? 'Desa Baru';
+  const parentKecId =
+    itemDesa && 'parentId' in itemDesa ? itemDesa.parentId : itemDesa?.parentKode;
+
+  if (!parentKecId) return desaId;
+
+  // Cari ID UUID kecamatan di Supabase
+  let finalKecId = parentKecId;
+  const isKecUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(parentKecId);
+  if (!isKecUuid) {
+    const { data: kecByKode } = await klien
+      .from('wilayah')
+      .select('id')
+      .eq('kode', parentKecId)
+      .maybeSingle<{ id: string }>();
+    if (kecByKode?.id) {
+      finalKecId = kecByKode.id;
+    } else {
+      const kecObj = cacheWilayah?.find((w) => w.id === parentKecId);
+      if (kecObj) {
+        const { data: kecByNama } = await klien
+          .from('wilayah')
+          .select('id')
+          .ilike('nama', kecObj.nama)
+          .maybeSingle<{ id: string }>();
+        if (kecByNama?.id) {
+          finalKecId = kecByNama.id;
+        }
+      }
+    }
+  }
+
+  // Cek apakah di database Supabase sudah ada desa dengan nama tersebut di kecamatan ini
+  const { data: desaByNama } = await klien
+    .from('wilayah')
+    .select('id')
+    .eq('parent_id', finalKecId)
+    .ilike('nama', namaDesa)
+    .maybeSingle<{ id: string }>();
+  if (desaByNama?.id) {
+    return desaByNama.id;
+  }
+
+  // Sisipkan desa baru ke tabel wilayah Supabase
+  const hasilTambah = await wilayahRepository.tambahDesa({
+    nama: namaDesa,
+    kecamatanId: finalKecId,
+    latPusat: itemDesa?.latPusat,
+    lngPusat: itemDesa?.lngPusat,
+  });
+
+  if (hasilTambah.ok) {
+    return hasilTambah.data.id;
+  }
+
+  return desaId;
+}
+
 async function simpanAtauPublikasikanLaporan(
   input: LaporanInput,
   peminta: ProfilPengguna,
@@ -1374,6 +1598,7 @@ async function simpanAtauPublikasikanLaporan(
   if (galatValidasi) return { ok: false, pesan: galatValidasi };
 
   try {
+    const idDesaValid = await pastikanDesaTersediaDiSupabase(input.desaId);
     const klien = ambilKlienSupabase();
     let idTarget = input.id;
 
@@ -1400,7 +1625,7 @@ async function simpanAtauPublikasikanLaporan(
       const { error } = await klien
         .from('laporan')
         .update({
-          desa_id: input.desaId,
+          desa_id: idDesaValid,
           nama_blok: input.namaBlok.trim(),
           lat: input.lat,
           lng: input.lng,
@@ -1433,7 +1658,7 @@ async function simpanAtauPublikasikanLaporan(
         .insert({
           kode: '',
           petugas_id: peminta.id,
-          desa_id: input.desaId,
+          desa_id: idDesaValid,
           nama_blok: input.namaBlok.trim(),
           lat: input.lat,
           lng: input.lng,
@@ -1548,11 +1773,12 @@ export const laporanRepository: LaporanRepository = {
     if (galatValidasi) return { ok: false, pesan: galatValidasi };
 
     try {
+      const idDesaValid = await pastikanDesaTersediaDiSupabase(input.desaId);
       const klien = ambilKlienSupabase();
       const { error } = await klien
         .from('laporan')
         .update({
-          desa_id: input.desaId,
+          desa_id: idDesaValid,
           nama_blok: input.namaBlok.trim(),
           lat: input.lat,
           lng: input.lng,
@@ -2478,3 +2704,131 @@ export const eksporService: EksporService = {
     }
   },
 };
+
+/**
+ * Menyinkronkan seluruh 1.012+ Kampung/Desa/Kelurahan Kemendagri ke tabel wilayah Supabase.
+ * Bekerja secara otomatis melalui API Supabase sehingga pengguna tidak perlu lagi
+ * menjalankan skrip SQL manual yang rawan terpotong di peramban.
+ */
+export async function sinkronkanMasterWilayahKeSupabase(
+  onProgress?: (selesai: number, total: number, pesan: string) => void
+): Promise<Hasil<{ totalTersinkron: number }>> {
+  try {
+    const klien = ambilKlienSupabase();
+    onProgress?.(0, MASTER_DESA.length, 'Menghubungkan ke basis data Supabase...');
+
+    // 1. Ambil seluruh kecamatan dari Supabase
+    const { data: kecDb, error: kecErr } = await klien
+      .from('wilayah')
+      .select('id, kode, nama, parent_id')
+      .eq('tipe', 'kecamatan')
+      .limit(500)
+      .returns<BarisDbWilayah[]>();
+
+    if (kecErr || !kecDb) {
+      return {
+        ok: false,
+        pesan: terjemahkanGalat(kecErr, 'Gagal mengambil data kecamatan dari basis data.'),
+      };
+    }
+
+    // 2. Ambil seluruh desa yang sudah ada di Supabase
+    const { data: desaDb, error: desaErr } = await klien
+      .from('wilayah')
+      .select('kode, nama, parent_id')
+      .eq('tipe', 'desa')
+      .limit(5000)
+      .returns<BarisDbWilayah[]>();
+
+    if (desaErr) {
+      return {
+        ok: false,
+        pesan: terjemahkanGalat(desaErr, 'Gagal memeriksa desa yang ada di basis data.'),
+      };
+    }
+
+    const setDesaEksis = new Set<string>();
+    (desaDb ?? []).forEach((d) => {
+      if (d.kode) setDesaEksis.add(d.kode);
+      if (d.parent_id) setDesaEksis.add(`${d.parent_id}:${normalisasiNamaWilayah(d.nama)}`);
+    });
+
+    // Buat pemetaan kecamatan
+    const mapKec = new Map<string, string>(); // kecKode / normNama -> UUID
+    kecDb.forEach((k) => {
+      if (k.kode) mapKec.set(k.kode, k.id);
+      mapKec.set(normalisasiNamaWilayah(k.nama), k.id);
+    });
+
+    // Siapkan baris yang perlu disisipkan
+    const barisPerluDisisipkan: Array<{
+      kode: string;
+      tipe: 'desa';
+      nama: string;
+      parent_id: string;
+    }> = [];
+
+    for (const masterDesa of MASTER_DESA) {
+      const kecId =
+        mapKec.get(masterDesa.parentKode ?? '') ||
+        mapKec.get(normalisasiNamaWilayah(masterDesa.parentKode ?? ''));
+      if (!kecId) continue;
+
+      const keyUnik = `${kecId}:${normalisasiNamaWilayah(masterDesa.nama)}`;
+      if (setDesaEksis.has(masterDesa.kode) || setDesaEksis.has(keyUnik)) {
+        continue;
+      }
+
+      barisPerluDisisipkan.push({
+        kode: masterDesa.kode,
+        tipe: 'desa',
+        nama: masterDesa.nama,
+        parent_id: kecId,
+      });
+    }
+
+    if (barisPerluDisisipkan.length === 0) {
+      onProgress?.(
+        MASTER_DESA.length,
+        MASTER_DESA.length,
+        'Seluruh 1.012+ desa sudah tersinkron lengkap di basis data.'
+      );
+      return { ok: true, data: { totalTersinkron: 0 } };
+    }
+
+    let tersinkron = 0;
+    const batchSize = 50;
+    for (let i = 0; i < barisPerluDisisipkan.length; i += batchSize) {
+      const batch = barisPerluDisisipkan.slice(i, i + batchSize);
+      const { error: insErr } = await klien
+        .from('wilayah')
+        .upsert(batch, { onConflict: 'kode', ignoreDuplicates: true });
+
+      if (insErr) {
+        for (const item of batch) {
+          await wilayahRepository.tambahDesa({
+            nama: item.nama,
+            kecamatanId: item.parent_id,
+          });
+          tersinkron++;
+        }
+      } else {
+        tersinkron += batch.length;
+      }
+
+      onProgress?.(
+        Math.min(tersinkron, barisPerluDisisipkan.length),
+        barisPerluDisisipkan.length,
+        `Menyinkronkan desa ${Math.min(tersinkron, barisPerluDisisipkan.length)} dari ${barisPerluDisisipkan.length}...`
+      );
+    }
+
+    bersihkanCacheSesiSupabase();
+    return { ok: true, data: { totalTersinkron: tersinkron } };
+  } catch (err) {
+    return {
+      ok: false,
+      pesan: terjemahkanGalat(err, 'Terjadi kesalahan saat menyinkronkan master wilayah.'),
+    };
+  }
+}

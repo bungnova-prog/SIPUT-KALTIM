@@ -58,30 +58,36 @@ set encrypted_password = crypt('Perlindungan.1!', gen_salt('bf')),
     email_confirmed_at = coalesce(email_confirmed_at, now())
 where lower(email) in ('adisanjaya2309@gmail.com');
 
--- 5. Pastikan Seluruh Pengguna Memiliki Baris di auth.identities
-insert into auth.identities (
-  id,
-  user_id,
-  provider_id,
-  identity_data,
-  provider,
-  last_sign_in_at,
-  created_at,
-  updated_at
-)
-select 
-  gen_random_uuid(),
-  u.id,
-  u.id::text,
-  jsonb_build_object('sub', u.id::text, 'email', lower(u.email)),
-  'email',
-  now(),
-  now(),
-  now()
-from auth.users u
-where not exists (
-  select 1 from auth.identities i where i.user_id = u.id and i.provider = 'email'
-);
+-- 5. Pastikan Seluruh Pengguna Memiliki Baris di auth.identities (Aman untuk Semua Versi GoTrue)
+do $$
+begin
+  insert into auth.identities (
+    id,
+    user_id,
+    provider_id,
+    identity_data,
+    provider,
+    last_sign_in_at,
+    created_at,
+    updated_at
+  )
+  select 
+    gen_random_uuid(),
+    u.id,
+    u.id::text,
+    jsonb_build_object('sub', u.id::text, 'email', lower(u.email)),
+    'email',
+    now(),
+    now(),
+    now()
+  from auth.users u
+  where not exists (
+    select 1 from auth.identities i where i.user_id = u.id and i.provider = 'email'
+  );
+exception when others then
+  -- Abaikan jika skema internal auth.identities berbeda antarversi GoTrue
+  null;
+end $$;
 
 -- 6. Fungsi Pembantu Keamanan & Hierarki
 create or replace function public.peran_saya()

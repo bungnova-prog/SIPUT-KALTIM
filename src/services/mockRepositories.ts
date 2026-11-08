@@ -1,4 +1,9 @@
 import {
+  MASTER_KECAMATAN,
+  ambilMasterDesaPerKecamatan,
+  normalisasiNamaWilayah,
+} from '../data/masterWilayahKaltim';
+import {
   buatFotoSvgSimulasi,
   MOCK_KOMODITAS,
   MOCK_LAPORAN,
@@ -114,10 +119,86 @@ const MOCK_LOG_EKSPOR_AWAL: LogEkspor[] = [
   },
 ];
 
+function inisialisasiDbWilayahLengkap(): DbWilayahRow[] {
+  const hasil: DbWilayahRow[] = structuredClone(MOCK_WILAYAH);
+  const sudahAdaId = new Set(hasil.map((w) => w.id));
+
+  // Lengkapi seluruh 105 kecamatan jika belum ada di mock
+  MASTER_KECAMATAN.forEach((mk) => {
+    const parentKab = hasil.find(
+      (w) =>
+        w.tipe === 'kabupaten' &&
+        (w.id === mk.parentKode ||
+          normalisasiNamaWilayah(w.nama) === normalisasiNamaWilayah(mk.parentKode ?? ''))
+    );
+    const normKec = normalisasiNamaWilayah(mk.nama);
+    const adaKec = hasil.some(
+      (w) =>
+        w.tipe === 'kecamatan' &&
+        (w.id === mk.kode || normalisasiNamaWilayah(w.nama) === normKec)
+    );
+    if (!adaKec) {
+      hasil.push({
+        id: mk.kode,
+        tipe: 'kecamatan',
+        nama: mk.nama,
+        parent_id: parentKab?.id ?? mk.parentKode ?? null,
+        uptd_id: parentKab?.uptd_id ?? null,
+        lat_pusat: mk.latPusat ?? parentKab?.lat_pusat,
+        lng_pusat: mk.lngPusat ?? parentKab?.lng_pusat,
+      });
+      sudahAdaId.add(mk.kode);
+    }
+  });
+
+  // Lengkapi seluruh 1.012+ desa ke masing-masing kecamatan
+  const desaPerKec = new Map<string, Set<string>>();
+  hasil
+    .filter((w) => w.tipe === 'desa' && w.parent_id)
+    .forEach((d) => {
+      const pId = d.parent_id!;
+      if (!desaPerKec.has(pId)) desaPerKec.set(pId, new Set());
+      desaPerKec.get(pId)!.add(normalisasiNamaWilayah(d.nama));
+      desaPerKec.get(pId)!.add(d.id);
+    });
+
+  MASTER_KECAMATAN.forEach((mk) => {
+    const targetKec = hasil.find(
+      (w) =>
+        w.tipe === 'kecamatan' &&
+        (w.id === mk.kode || normalisasiNamaWilayah(w.nama) === normalisasiNamaWilayah(mk.nama))
+    );
+    if (!targetKec) return;
+
+    const setDesa = desaPerKec.get(targetKec.id) ?? new Set();
+    const masterDesas = ambilMasterDesaPerKecamatan(mk.kode);
+    masterDesas.forEach((md) => {
+      const normDesa = normalisasiNamaWilayah(md.nama);
+      if (!setDesa.has(normDesa) && !sudahAdaId.has(md.kode)) {
+        hasil.push({
+          id: md.kode,
+          tipe: 'desa',
+          nama: md.nama,
+          parent_id: targetKec.id,
+          uptd_id: targetKec.uptd_id,
+          lat_pusat: md.latPusat ?? targetKec.lat_pusat,
+          lng_pusat: md.lngPusat ?? targetKec.lng_pusat,
+        });
+        setDesa.add(normDesa);
+        setDesa.add(md.kode);
+        sudahAdaId.add(md.kode);
+      }
+    });
+    desaPerKec.set(targetKec.id, setDesa);
+  });
+
+  return hasil;
+}
+
 // Penyimpanan memori Fase 1 (diklon dari mock agar dapat direset saat Keluar Sistem)
 let dbProfiles: DbProfileRow[] = structuredClone(MOCK_PROFILES);
 let dbUptd: DbUptdRow[] = structuredClone(MOCK_UPTD);
-let dbWilayah: DbWilayahRow[] = structuredClone(MOCK_WILAYAH);
+let dbWilayah: DbWilayahRow[] = inisialisasiDbWilayahLengkap();
 let dbKomoditas: DbKomoditasRow[] = structuredClone(MOCK_KOMODITAS);
 let dbOpt: DbOptRow[] = structuredClone(MOCK_OPT);
 let dbLaporan: DbLaporanRow[] = structuredClone(MOCK_LAPORAN);
@@ -1601,7 +1682,7 @@ export function bersihkanSesiSimulasi(): void {
   }
   dbProfiles = structuredClone(MOCK_PROFILES);
   dbUptd = structuredClone(MOCK_UPTD);
-  dbWilayah = structuredClone(MOCK_WILAYAH);
+  dbWilayah = inisialisasiDbWilayahLengkap();
   dbKomoditas = structuredClone(MOCK_KOMODITAS);
   dbOpt = structuredClone(MOCK_OPT);
   dbLaporan = structuredClone(MOCK_LAPORAN);
