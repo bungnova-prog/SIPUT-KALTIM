@@ -1055,7 +1055,7 @@ declare
   v_encrypted_pw text;
   v_profil public.profiles%rowtype;
 begin
-  if public.peran_saya() <> 'admin' then
+  if coalesce(public.peran_saya()::text, '') <> 'admin' then
     return jsonb_build_object('ok', false, 'pesan', 'Hanya Admin Provinsi yang berwenang menambah akun pengguna.');
   end if;
 
@@ -1140,7 +1140,7 @@ as $$
 declare
   v_count integer;
 begin
-  if public.peran_saya() <> 'admin' then
+  if coalesce(public.peran_saya()::text, '') <> 'admin' then
     return jsonb_build_object('ok', false, 'pesan', 'Hanya Admin Provinsi yang berwenang menghapus akun.');
   end if;
 

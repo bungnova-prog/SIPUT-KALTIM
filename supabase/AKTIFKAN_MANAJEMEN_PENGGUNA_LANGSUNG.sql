@@ -1,13 +1,65 @@
 -- ============================================================================
 -- SIPUT-KALTIM: AKTIFKAN PENDAFTARAN & PENGHAPUSAN AKUN LANGSUNG OLEH ADMIN
--- Serta Mendukung Operator Tingkat Provinsi / Lintas Wilayah Kaltim
+-- Berisi seluruh fungsi pembantu, penyesuaian constraint, dan kebijakan RLS
 -- Jalankan seluruh skrip ini di SQL Editor Supabase (https://supabase.com/dashboard)
 -- ============================================================================
 
--- 1. Pastikan ekstensi pgcrypto aktif untuk enkripsi password bcrypt
+-- 1. Pastikan Ekstensi pgcrypto Aktif untuk Enkripsi Kata Sandi Bcrypt
 create extension if not exists pgcrypto with schema extensions;
 
--- 2. Penyesuaian constraint tabel profiles:
+-- 2. Pastikan Tipe Enum 'peran' dan 'tipe_wilayah' Ada
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'peran') then
+    create type public.peran as enum ('admin', 'operator', 'petugas');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'tipe_wilayah') then
+    create type public.tipe_wilayah as enum ('kabupaten', 'kecamatan', 'desa');
+  end if;
+end $$;
+
+-- 3. Fungsi Pembantu Keamanan & Hierarki (Wajib Ada untuk Kebijakan RLS)
+create or replace function public.peran_saya()
+returns public.peran
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select peran from public.profiles where id = auth.uid() and aktif = true
+$$;
+
+create or replace function public.kabupaten_saya()
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select wilayah_id from public.profiles where id = auth.uid() and aktif = true
+$$;
+
+create or replace function public.kabupaten_dari_desa(p_desa uuid)
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select kab.id
+  from public.wilayah d
+  join public.wilayah kec on kec.id = d.parent_id
+  join public.wilayah kab on kab.id = kec.parent_id
+  where d.id = p_desa
+    and d.tipe = 'desa'
+$$;
+
+-- Beri izin eksekusi fungsi ke peran authenticated
+grant execute on function public.peran_saya() to authenticated;
+grant execute on function public.kabupaten_saya() to authenticated;
+grant execute on function public.kabupaten_dari_desa(uuid) to authenticated;
+
+-- 4. Penyesuaian constraint tabel profiles:
 -- Operator kini diperbolehkan wilayah_id null (Provinsi Kaltim / Lintas Wilayah)
 -- maupun memilih Kabupaten/Kota tertentu.
 alter table public.profiles drop constraint if exists chk_wilayah_peran;
@@ -17,26 +69,27 @@ alter table public.profiles add constraint chk_wilayah_peran check (
   or (peran = 'petugas' and wilayah_id is not null)
 );
 
--- 3. Kebijakan RLS Tambah & Hapus untuk Admin di tabel public.profiles
+-- 5. Kebijakan RLS pada tabel public.profiles
+alter table public.profiles enable row level security;
+
 drop policy if exists profiles_tambah_admin on public.profiles;
 create policy profiles_tambah_admin on public.profiles
   for insert to authenticated
-  with check (public.peran_saya() = 'admin');
+  with check (coalesce(public.peran_saya()::text, '') = 'admin');
 
 drop policy if exists profiles_hapus_admin on public.profiles;
 create policy profiles_hapus_admin on public.profiles
   for delete to authenticated
-  using (public.peran_saya() = 'admin');
+  using (coalesce(public.peran_saya()::text, '') = 'admin');
 
--- 4. Kebijakan RLS Profiles: Operator Lintas Wilayah dapat melihat seluruh profil
 drop policy if exists profiles_baca on public.profiles;
 create policy profiles_baca on public.profiles
   for select to authenticated
   using (
     id = auth.uid()
-    or public.peran_saya() = 'admin'
+    or coalesce(public.peran_saya()::text, '') = 'admin'
     or (
-      public.peran_saya() = 'operator'
+      coalesce(public.peran_saya()::text, '') = 'operator'
       and (
         public.kabupaten_saya() is null
         or wilayah_id = public.kabupaten_saya()
@@ -44,65 +97,72 @@ create policy profiles_baca on public.profiles
       and peran <> 'admin'
     )
     or (
-      public.peran_saya() = 'petugas'
+      coalesce(public.peran_saya()::text, '') = 'petugas'
       and wilayah_id = public.kabupaten_saya()
       and peran <> 'admin'
     )
   );
 
--- 5. Kebijakan RLS Laporan: Operator Lintas Wilayah dapat membaca & memverifikasi laporan se-Kaltim
-drop policy if exists laporan_baca on public.laporan;
-create policy laporan_baca on public.laporan
-  for select to authenticated
-  using (
-    public.peran_saya() = 'admin'
-    or (
-      public.peran_saya() = 'operator'
-      and (
-        public.kabupaten_saya() is null
-        or public.kabupaten_dari_desa(desa_id) = public.kabupaten_saya()
-      )
-      and (status <> 'draf' or petugas_id = auth.uid())
-    )
-    or (
-      public.peran_saya() = 'petugas'
-      and (
-        petugas_id = auth.uid()
+-- 6. Kebijakan RLS Laporan (bila tabel laporan sudah ada)
+do $$
+begin
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'laporan') then
+    alter table public.laporan enable row level security;
+
+    drop policy if exists laporan_baca on public.laporan;
+    create policy laporan_baca on public.laporan
+      for select to authenticated
+      using (
+        coalesce(public.peran_saya()::text, '') = 'admin'
         or (
-          public.kabupaten_dari_desa(desa_id) = public.kabupaten_saya()
-          and status <> 'draf'
+          coalesce(public.peran_saya()::text, '') = 'operator'
+          and (
+            public.kabupaten_saya() is null
+            or public.kabupaten_dari_desa(desa_id) = public.kabupaten_saya()
+          )
+          and (status <> 'draf' or petugas_id = auth.uid())
         )
-      )
-    )
-  );
+        or (
+          coalesce(public.peran_saya()::text, '') = 'petugas'
+          and (
+            petugas_id = auth.uid()
+            or (
+              public.kabupaten_dari_desa(desa_id) = public.kabupaten_saya()
+              and status <> 'draf'
+            )
+          )
+        )
+      );
 
-drop policy if exists laporan_verifikasi_operator on public.laporan;
-create policy laporan_verifikasi_operator on public.laporan
-  for update to authenticated
-  using (
-    (
-      public.peran_saya() = 'operator'
-      and (
-        public.kabupaten_saya() is null
-        or public.kabupaten_dari_desa(desa_id) = public.kabupaten_saya()
+    drop policy if exists laporan_verifikasi_operator on public.laporan;
+    create policy laporan_verifikasi_operator on public.laporan
+      for update to authenticated
+      using (
+        (
+          coalesce(public.peran_saya()::text, '') = 'operator'
+          and (
+            public.kabupaten_saya() is null
+            or public.kabupaten_dari_desa(desa_id) = public.kabupaten_saya()
+          )
+          and status in ('menunggu', 'terverifikasi', 'ditolak')
+        )
+        or coalesce(public.peran_saya()::text, '') = 'admin'
       )
-      and status in ('menunggu', 'terverifikasi', 'ditolak')
-    )
-    or public.peran_saya() = 'admin'
-  )
-  with check (
-    (
-      public.peran_saya() = 'operator'
-      and (
-        public.kabupaten_saya() is null
-        or public.kabupaten_dari_desa(desa_id) = public.kabupaten_saya()
-      )
-      and status in ('menunggu', 'terverifikasi', 'ditolak')
-    )
-    or public.peran_saya() = 'admin'
-  );
+      with check (
+        (
+          coalesce(public.peran_saya()::text, '') = 'operator'
+          and (
+            public.kabupaten_saya() is null
+            or public.kabupaten_dari_desa(desa_id) = public.kabupaten_saya()
+          )
+          and status in ('menunggu', 'terverifikasi', 'ditolak')
+        )
+        or coalesce(public.peran_saya()::text, '') = 'admin'
+      );
+  end if;
+end $$;
 
--- 6. Fungsi Database: Admin Tambah Pengguna Langsung
+-- 7. Fungsi Database: Admin Tambah Pengguna Langsung (RPC)
 create or replace function public.admin_tambah_pengguna(
   p_email text,
   p_kata_sandi text,
@@ -124,7 +184,7 @@ declare
   v_profil public.profiles%rowtype;
 begin
   -- 1. Validasi pemanggil adalah Admin
-  if public.peran_saya() <> 'admin' then
+  if coalesce(public.peran_saya()::text, '') <> 'admin' then
     return jsonb_build_object(
       'ok', false,
       'pesan', 'Hanya Admin Provinsi yang berwenang menambah akun pengguna.'
@@ -217,7 +277,6 @@ begin
   end if;
 
   -- 3. Simpan atau perbarui profil di public.profiles
-  -- Untuk admin atau operator lintas wilayah, wilayah_id bernilai null
   insert into public.profiles (
     id,
     nama,
@@ -259,7 +318,9 @@ exception when others then
 end;
 $$;
 
--- 7. Fungsi Database: Admin Hapus Pengguna
+grant execute on function public.admin_tambah_pengguna(text, text, text, text, text, text, uuid, text) to authenticated;
+
+-- 8. Fungsi Database: Admin Hapus Pengguna (RPC)
 create or replace function public.admin_hapus_pengguna(
   p_target_id uuid
 )
@@ -272,7 +333,7 @@ declare
   v_count integer;
 begin
   -- 1. Validasi pemanggil adalah Admin
-  if public.peran_saya() <> 'admin' then
+  if coalesce(public.peran_saya()::text, '') <> 'admin' then
     return jsonb_build_object('ok', false, 'pesan', 'Hanya Admin Provinsi yang berwenang menghapus akun.');
   end if;
 
@@ -298,3 +359,5 @@ exception when others then
   return jsonb_build_object('ok', false, 'pesan', SQLERRM);
 end;
 $$;
+
+grant execute on function public.admin_hapus_pengguna(uuid) to authenticated;
