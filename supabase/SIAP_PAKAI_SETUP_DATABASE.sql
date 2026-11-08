@@ -1,4 +1,4 @@
-﻿-- ============================================================================
+-- ============================================================================
 -- Migrasi 001: Skema Inti SIPUT-KALTIM (Fase 2)
 -- Sumber: SCHEMA.md Â§2â€“Â§4, Â§6 dan SECURITY.md Â§5, Â§7
 -- Catatan: Jalankan secara sadar oleh pemilik proyek pada Supabase SQL Editor / CLI.
@@ -554,11 +554,21 @@ create policy profiles_baca on public.profiles
     )
   );
 
+drop policy if exists profiles_tambah_admin on public.profiles;
+create policy profiles_tambah_admin on public.profiles
+  for insert to authenticated
+  with check (public.peran_saya() = 'admin');
+
 drop policy if exists profiles_ubah_admin on public.profiles;
 create policy profiles_ubah_admin on public.profiles
   for update to authenticated
   using (public.peran_saya() = 'admin')
   with check (public.peran_saya() = 'admin');
+
+drop policy if exists profiles_hapus_admin on public.profiles;
+create policy profiles_hapus_admin on public.profiles
+  for delete to authenticated
+  using (public.peran_saya() = 'admin');
 
 -- 4. Kebijakan Tabel laporan (SCHEMA.md Â§5)
 drop policy if exists laporan_baca on public.laporan;

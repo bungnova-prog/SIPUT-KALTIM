@@ -112,6 +112,7 @@ export interface AuthService {
   masukSebagaiSimulasi?(peran?: Peran): Promise<Hasil<ProfilPengguna>>;
   keluarSistem(): Promise<Hasil<void>>;
   langgananSesiAuth(cb: (profil: ProfilPengguna | null) => void): () => void;
+  ubahKataSandi?(kataSandiBaru: string): Promise<Hasil<void>>;
 }
 
 export interface PenggunaRepository {
@@ -134,6 +135,7 @@ export interface PenggunaRepository {
     aktif: boolean,
     peminta: ProfilPengguna
   ): Promise<Hasil<ProfilPengguna>>;
+  hapus(id: string, peminta: ProfilPengguna): Promise<Hasil<void>>;
   langganan(cb: () => void): () => void;
 }
 

@@ -88,11 +88,21 @@ create policy profiles_baca on public.profiles
     )
   );
 
+drop policy if exists profiles_tambah_admin on public.profiles;
+create policy profiles_tambah_admin on public.profiles
+  for insert to authenticated
+  with check (public.peran_saya() = 'admin');
+
 drop policy if exists profiles_ubah_admin on public.profiles;
 create policy profiles_ubah_admin on public.profiles
   for update to authenticated
   using (public.peran_saya() = 'admin')
   with check (public.peran_saya() = 'admin');
+
+drop policy if exists profiles_hapus_admin on public.profiles;
+create policy profiles_hapus_admin on public.profiles
+  for delete to authenticated
+  using (public.peran_saya() = 'admin');
 
 -- 4. Kebijakan Tabel laporan (SCHEMA.md §5)
 drop policy if exists laporan_baca on public.laporan;

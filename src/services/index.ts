@@ -171,4 +171,16 @@ export const authService: AuthService = {
     }
     return supabaseRepo.authService.langgananSesiAuth(cb);
   },
+
+  ubahKataSandi: async (kataSandiBaru: string) => {
+    if (pakaiMock()) {
+      if (!kataSandiBaru || kataSandiBaru.trim().length < 6) {
+        return { ok: false, pesan: 'Kata sandi minimal 6 karakter.' };
+      }
+      return { ok: true, data: undefined };
+    }
+    return supabaseRepo.authService.ubahKataSandi
+      ? supabaseRepo.authService.ubahKataSandi(kataSandiBaru)
+      : { ok: true, data: undefined };
+  },
 };

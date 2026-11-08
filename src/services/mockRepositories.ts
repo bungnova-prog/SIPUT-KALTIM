@@ -1392,6 +1392,21 @@ export const penggunaRepository: PenggunaRepository = {
     beritahuPengguna();
     return { ok: true, data: petakanProfil(row) };
   },
+  async hapus(id, peminta): Promise<Hasil<void>> {
+    if (peminta.peran !== 'admin') {
+      return { ok: false, pesan: 'Hanya Admin Provinsi yang dapat menghapus pengguna.' };
+    }
+    if (id === peminta.id) {
+      return { ok: false, pesan: 'Anda tidak dapat menghapus akun Anda sendiri saat sedang masuk.' };
+    }
+    const index = dbProfiles.findIndex((p) => p.id === id);
+    if (index === -1) {
+      return { ok: false, pesan: 'Pengguna tidak ditemukan.' };
+    }
+    dbProfiles = dbProfiles.filter((p) => p.id !== id);
+    beritahuPengguna();
+    return { ok: true, data: undefined };
+  },
   langganan(cb: () => void): () => void {
     pelangganPengguna.add(cb);
     return () => {

@@ -11,6 +11,7 @@ import {
   FilePenLine,
   FileText,
   Info,
+  KeyRound,
   LayoutDashboard,
   Leaf,
   LogOut,
@@ -31,6 +32,7 @@ import {
 import { notifikasiRepository } from '../services';
 import type { NotifikasiItem, Peran, TipeNotifikasi } from '../types/domain';
 import logoKaltim from '../assets/logo-kaltim.png';
+import ModalUbahKataSandi from './ModalUbahKataSandi';
 
 const menuNavigasi: Array<{
   to: string;
@@ -139,6 +141,7 @@ export default function TataLetakUtama() {
   const [waktu, setWaktu] = useState(new Date());
   const [drawerBuka, setDrawerBuka] = useState(false);
   const [panelNotifBuka, setPanelNotifBuka] = useState(false);
+  const [modalGantiSandiBuka, setModalGantiSandiBuka] = useState(false);
   const [notifikasi, setNotifikasi] = useState<NotifikasiItem[]>([]);
 
   const {
@@ -356,14 +359,14 @@ export default function TataLetakUtama() {
               )}
             </div>
 
-            <div className="hidden items-center gap-2.5 rounded-xl border border-line bg-canvas px-2.5 py-1.5 sm:flex">
+            <div className="hidden items-center gap-2 rounded-xl border border-line bg-canvas px-2.5 py-1.5 sm:flex">
               <div
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-900 text-xs font-bold text-surface"
                 aria-hidden="true"
               >
                 {inisialProfil(profilAktif.nama)}
               </div>
-              <div className="max-w-[160px] text-left text-xs">
+              <div className="max-w-[140px] text-left text-xs">
                 <p className="truncate font-semibold text-ink-900">
                   {profilAktif.nama}
                 </p>
@@ -371,6 +374,16 @@ export default function TataLetakUtama() {
                   {profilAktif.jabatan}
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setModalGantiSandiBuka(true)}
+                title="Ubah kata sandi akun Anda"
+                aria-label="Ubah kata sandi akun Anda"
+                className="ml-1 inline-flex min-h-[34px] items-center gap-1 rounded-lg border border-line bg-surface px-2 py-1 text-[11px] font-bold text-ink-900 hover:bg-brand-100 hover:text-brand-900"
+              >
+                <KeyRound className="h-3.5 w-3.5 text-brand-900" aria-hidden />
+                <span>Sandi</span>
+              </button>
             </div>
           </div>
         </div>
@@ -432,6 +445,14 @@ export default function TataLetakUtama() {
                 Versi {__APP_VERSION__}
               </p>
             </div>
+            <button
+              type="button"
+              onClick={() => setModalGantiSandiBuka(true)}
+              className="flex min-h-[44px] w-full items-center gap-2 rounded-lg px-3 py-2 font-medium text-ink-900 hover:bg-canvas"
+            >
+              <KeyRound className="h-4 w-4 shrink-0 text-brand-900" aria-hidden />
+              <span>Ubah Kata Sandi</span>
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -522,6 +543,17 @@ export default function TataLetakUtama() {
                   type="button"
                   onClick={() => {
                     setDrawerBuka(false);
+                    setModalGantiSandiBuka(true);
+                  }}
+                  className="flex min-h-[44px] w-full items-center gap-2 rounded-lg px-3 py-2 font-medium text-ink-900 hover:bg-canvas"
+                >
+                  <KeyRound className="h-4 w-4 shrink-0 text-brand-900" aria-hidden />
+                  <span>Ubah Kata Sandi</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawerBuka(false);
                     void keluarSistem();
                   }}
                   className="flex min-h-[44px] w-full items-center gap-2 rounded-lg px-3 py-2 font-semibold text-danger-600 hover:bg-danger-100"
@@ -598,6 +630,12 @@ export default function TataLetakUtama() {
           );
         })}
       </div>
+
+      <ModalUbahKataSandi
+        terbuka={modalGantiSandiBuka}
+        onTutup={() => setModalGantiSandiBuka(false)}
+        namaPengguna={profilAktif.nama}
+      />
     </div>
   );
 }

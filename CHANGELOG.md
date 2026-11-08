@@ -17,6 +17,10 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/) dan
 ## [Belum Dirilis]
 
 ### Ditambahkan
+- Menambahkan menu dan modal konfirmasi Hapus Akun Pengguna pada Manajemen Pengguna (`src/pages/HalamanPengguna.tsx`) khusus peran Admin Provinsi dengan perlindungan audit (mencegah penghapusan akun pemilik laporan OPT).
+- Menambahkan komponen `ModalUbahKataSandi` (`src/components/ModalUbahKataSandi.tsx`) untuk penggantian kata sandi mandiri oleh setiap pengguna terautentikasi (petugas/operator/admin), dapat diakses melalui header profil, sidebar, drawer navigasi ponsel, dan baris sesi pengguna.
+- Menambahkan skrip SQL kebijakan penghapusan dan penambahan baris `public.profiles` (`supabase/TAMBAH_KEBIJAKAN_HAPUS_PROFIL.sql` dan pembaruan `SIAP_PAKAI_SETUP_DATABASE.sql`).
+- Menambahkan metode `ubahKataSandi` pada `authService` dan `hapus` pada `penggunaRepository`.
 - Menambahkan aset resmi logo Pemerintah Provinsi Kalimantan Timur (*Ruhui Rahayu*) (`src/assets/logo-kaltim.png`, `public/logo-kaltim.png`, dan `public/logo-simulasi.svg`) dengan hashing aset Vite pada header tata letak utama, drawer navigasi ponsel, dan halaman masuk.
 - Menambahkan input kata sandi akun petugas pada form Manajemen Pengguna (`src/pages/HalamanPengguna.tsx`) sehingga Admin dapat langsung menentukan kata sandi petugas saat mendaftar.
 - Menambahkan `DEPLOY.md`: panduan lengkap deploy Cloudflare Pages via GitHub (persiapan repo, konfigurasi build `dist`, variabel lingkungan Production/Preview, CSP Supabase, Google Maps, bootstrap Admin pertama, verifikasi pasca-deploy, rollback, domain kustom, biaya, dan pemecahan masalah).
@@ -49,6 +53,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/) dan
 - Helper transisi status laporan (`src/lib/alurLaporan.ts`) dan perhitungan bulan WITA (`src/lib/waktuWita.ts`).
 
 ### Diubah
+- Mengubah kata sandi awal bawaan pendaftaran petugas menjadi `Perlindungan.1!` (pada formulir pendaftaran Admin dan fallback layanan backend) serta menyediakan alur perubahan kata sandi secara mandiri oleh setiap petugas/operator.
 - Mengubah kepanjangan nama SIPUT menjadi **Sistem Informasi Pelaporan OPT** di seluruh halaman antarmuka (`HalamanMasuk`, `TataLetakUtama`), judul dokumen HTML (`index.html`), deskripsi `package.json`, dan lembar ekspor laporan (`src/lib/ekspor.ts`).
 - Mengubah alur pendaftaran pengguna baru di `src/services/supabaseRepositories.ts` dan `src/pages/HalamanPengguna.tsx`: Admin dapat langsung mendaftarkan dan menyimpan akun petugas/operator beserta kata sandinya ke Supabase Auth dan tabel `profiles` tanpa memerlukan Edge Function atau tautan undangan email.
 - Menaikkan versi aplikasi di `package.json` menjadi `1.0.0` dan mengalihkan `src/services/index.ts` ke `supabaseRepositories` atas persetujuan tertulis pengguna untuk memulai Fase 2 penuh (termasuk persetujuan tabel `[USUL]`: `uptd`, `laporan_riwayat`, `konfigurasi`, serta kolom `catatan_verifikasi` dan `diverifikasi_pada`).

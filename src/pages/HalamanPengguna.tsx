@@ -1,10 +1,13 @@
 import {
   CheckCircle2,
+  KeyRound,
   Power,
   ShieldAlert,
   Sliders,
+  Trash2,
   UserPlus,
   Users,
+  X,
   XCircle,
 } from 'lucide-react';
 import { type FormEvent, useCallback, useEffect, useState } from 'react';
@@ -13,6 +16,7 @@ import {
   KotakDataKosong,
   KotakGalatData,
 } from '../components/StatusMuatData';
+import ModalUbahKataSandi from '../components/ModalUbahKataSandi';
 import { tampilkanNipSesuaiPeran } from '../lib/format';
 import {
   KONFIGURASI_KLASIFIKASI_BAWAAN,
@@ -46,10 +50,10 @@ export default function HalamanPengguna() {
   });
   const [sedangSimpanKonfig, setSedangSimpanKonfig] = useState(false);
 
-  // Form Undang Pengguna Baru (Khusus Admin melalui Edge Function — SECURITY.md §5.3)
+  // Form Tambah Pengguna Baru
   const [bukaFormTambah, setBukaFormTambah] = useState(false);
   const [emailBaru, setEmailBaru] = useState('');
-  const [kataSandiBaru, setKataSandiBaru] = useState('PoptKaltim2026!');
+  const [kataSandiBaru, setKataSandiBaru] = useState('Perlindungan.1!');
   const [namaBaru, setNamaBaru] = useState('');
   const [nipBaru, setNipBaru] = useState('');
   const [jabatanBaru, setJabatanBaru] = useState('');
@@ -58,6 +62,11 @@ export default function HalamanPengguna() {
   const [wkppBaru, setWkppBaru] = useState('');
   const [sedangMenambah, setSedangMenambah] = useState(false);
   const [idSedangDiubahStatus, setIdSedangDiubahStatus] = useState<string | null>(null);
+
+  // Modal Hapus & Modal Ubah Sandi
+  const [penggunaMauDihapus, setPenggunaMauDihapus] = useState<ProfilPengguna | null>(null);
+  const [sedangMenghapus, setSedangMenghapus] = useState(false);
+  const [modalGantiSandiBuka, setModalGantiSandiBuka] = useState(false);
 
   const muatData = useCallback(() => {
     setMemuat(true);
@@ -115,7 +124,7 @@ export default function HalamanPengguna() {
     }
 
     setEmailBaru('');
-    setKataSandiBaru('PoptKaltim2026!');
+    setKataSandiBaru('Perlindungan.1!');
     setNamaBaru('');
     setNipBaru('');
     setJabatanBaru('');
@@ -126,6 +135,30 @@ export default function HalamanPengguna() {
       judul: 'Akun Pengguna Berhasil Disimpan',
       pesan: `${hasil.data.nama} (${hasil.data.peran.toUpperCase()}) telah terdaftar dan siap digunakan untuk masuk.`,
     });
+  };
+
+  const tanganiHapusPengguna = async () => {
+    if (!penggunaMauDihapus) return;
+    setSedangMenghapus(true);
+    const hasil = await penggunaRepository.hapus(penggunaMauDihapus.id, profilAktif);
+    setSedangMenghapus(false);
+
+    if (!hasil.ok) {
+      tambahToast({
+        jenis: 'gagal',
+        judul: 'Gagal Menghapus Pengguna',
+        pesan: hasil.pesan,
+      });
+      return;
+    }
+
+    tambahToast({
+      jenis: 'sukses',
+      judul: 'Pengguna Berhasil Dihapus',
+      pesan: `Akun ${penggunaMauDihapus.nama} telah berhasil dihapus dari sistem.`,
+    });
+    setPenggunaMauDihapus(null);
+    muatData();
   };
 
   const tanganiUbahStatusAktif = async (target: ProfilPengguna) => {
@@ -381,7 +414,7 @@ export default function HalamanPengguna() {
                   className="mt-1 min-h-[44px] w-full rounded-xl border border-line bg-surface px-3 py-2 font-mono text-xs text-ink-900"
                 />
                 <p className="mt-1 text-[11px] text-ink-600">
-                  Kata sandi ini digunakan petugas untuk masuk ke aplikasi.
+                  Kata sandi awal bawaan: <code className="font-mono font-bold text-brand-900">Perlindungan.1!</code> (Petugas dapat mengubahnya secara mandiri setelah masuk).
                 </p>
               </div>
             </div>
@@ -491,22 +524,43 @@ export default function HalamanPengguna() {
                             <td className="px-3 py-3.5 text-right">
                               <div className="inline-flex flex-wrap justify-end gap-1.5">
                                 {sedangDipakai && (
-                                  <span className="inline-flex min-h-[44px] items-center rounded-lg bg-gold-100 px-3 py-1.5 font-bold text-ink-900">
-                                    Sesi Anda
-                                  </span>
+                                  <>
+                                    <span className="inline-flex min-h-[44px] items-center rounded-lg bg-gold-100 px-3 py-1.5 font-bold text-ink-900">
+                                      Sesi Anda
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setModalGantiSandiBuka(true)}
+                                      className="inline-flex min-h-[44px] items-center gap-1 rounded-lg border border-line bg-surface px-3 py-1.5 font-bold text-brand-900 hover:bg-canvas"
+                                    >
+                                      <KeyRound className="h-3.5 w-3.5" aria-hidden />
+                                      <span>Ubah Sandi</span>
+                                    </button>
+                                  </>
                                 )}
                                 {profilAktif.peran === 'admin' && !sedangDipakai && (
-                                  <button
-                                    type="button"
-                                    disabled={idSedangDiubahStatus === p.id}
-                                    onClick={() => {
-                                      void tanganiUbahStatusAktif(p);
-                                    }}
-                                    className="inline-flex min-h-[44px] items-center gap-1 rounded-lg border border-line bg-canvas px-3 py-1.5 font-bold text-ink-900 hover:bg-danger-100/60 disabled:opacity-60"
-                                  >
-                                    <Power className="h-3.5 w-3.5" aria-hidden />
-                                    <span>{p.aktif ? 'Nonaktifkan' : 'Aktifkan'}</span>
-                                  </button>
+                                  <>
+                                    <button
+                                      type="button"
+                                      disabled={idSedangDiubahStatus === p.id}
+                                      onClick={() => {
+                                        void tanganiUbahStatusAktif(p);
+                                      }}
+                                      className="inline-flex min-h-[44px] items-center gap-1 rounded-lg border border-line bg-canvas px-3 py-1.5 font-bold text-ink-900 hover:bg-canvas disabled:opacity-60"
+                                    >
+                                      <Power className="h-3.5 w-3.5" aria-hidden />
+                                      <span>{p.aktif ? 'Nonaktifkan' : 'Aktifkan'}</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setPenggunaMauDihapus(p)}
+                                      className="inline-flex min-h-[44px] items-center gap-1 rounded-lg border border-danger-600/30 bg-danger-100/40 px-3 py-1.5 font-bold text-danger-600 hover:bg-danger-100"
+                                      title={`Hapus akun ${p.nama}`}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                                      <span>Hapus</span>
+                                    </button>
+                                  </>
                                 )}
                               </div>
                             </td>
@@ -564,24 +618,42 @@ export default function HalamanPengguna() {
                             </span>
                           )}
                           {sedangDipakai && (
-                            <span className="rounded-lg bg-gold-100 px-2.5 py-1 text-[11px] font-bold text-ink-900">
-                              Sesi Anda
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="rounded-lg bg-gold-100 px-2.5 py-1 text-[11px] font-bold text-ink-900">
+                                Sesi Anda
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setModalGantiSandiBuka(true)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-[11px] font-bold text-brand-900"
+                              >
+                                <KeyRound className="h-3 w-3" aria-hidden />
+                                <span>Ubah Sandi</span>
+                              </button>
+                            </div>
                           )}
                         </div>
 
                         {profilAktif.peran === 'admin' && !sedangDipakai && (
-                          <div className="pt-1">
+                          <div className="grid grid-cols-2 gap-2 pt-1">
                             <button
                               type="button"
                               disabled={idSedangDiubahStatus === p.id}
                               onClick={() => {
                                 void tanganiUbahStatusAktif(p);
                               }}
-                              className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 font-bold text-ink-900"
+                              className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-bold text-ink-900"
                             >
                               <Power className="h-4 w-4" aria-hidden />
-                              <span>{p.aktif ? 'Nonaktifkan Akun' : 'Aktifkan Akun'}</span>
+                              <span>{p.aktif ? 'Nonaktifkan' : 'Aktifkan'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPenggunaMauDihapus(p)}
+                              className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-danger-600/30 bg-danger-100/40 px-3 py-2 text-xs font-bold text-danger-600 hover:bg-danger-100"
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden />
+                              <span>Hapus</span>
                             </button>
                           </div>
                         )}
@@ -763,6 +835,80 @@ export default function HalamanPengguna() {
           )}
         </>
       )}
+
+      {/* Modal Konfirmasi Hapus Akun Pengguna */}
+      {penggunaMauDihapus && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="judul-konfirmasi-hapus"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/60 p-4 backdrop-blur-sm animate-fade-in"
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-line bg-surface p-5 shadow-2xl sm:p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-danger-100 text-danger-600">
+                  <Trash2 className="h-5 w-5" aria-hidden />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 id="judul-konfirmasi-hapus" className="text-base font-bold text-ink-900 sm:text-lg">
+                    Hapus Akun Pengguna
+                  </h2>
+                  <p className="mt-1.5 text-xs leading-relaxed text-ink-600 sm:text-sm">
+                    Apakah Anda yakin ingin menghapus akun{' '}
+                    <strong className="text-ink-900">{penggunaMauDihapus.nama}</strong> ({penggunaMauDihapus.peran.toUpperCase()} · {penggunaMauDihapus.namaWilayah})?
+                  </p>
+                  <div className="mt-3 rounded-xl border border-gold-500 bg-gold-100/70 p-3 text-xs text-ink-900">
+                    <p className="font-semibold text-ink-900">Ketentuan Keamanan Data:</p>
+                    <p className="mt-0.5 leading-relaxed text-ink-600">
+                      Akun yang telah memiliki riwayat pelaporan OPT tidak dapat dihapus permanen demi integritas audit dinas, namun dapat dinonaktifkan statusnya.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={sedangMenghapus}
+                onClick={() => setPenggunaMauDihapus(null)}
+                aria-label="Tutup konfirmasi hapus"
+                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-ink-600 hover:bg-canvas disabled:opacity-50"
+              >
+                <X className="h-5 w-5" aria-hidden />
+              </button>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2 border-t border-line pt-4">
+              <button
+                type="button"
+                disabled={sedangMenghapus}
+                onClick={() => setPenggunaMauDihapus(null)}
+                className="min-h-[44px] rounded-xl border border-line bg-surface px-4 py-2 text-xs font-bold text-ink-900 hover:bg-canvas disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={sedangMenghapus}
+                onClick={() => void tanganiHapusPengguna()}
+                className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-danger-600 px-5 py-2 text-xs font-bold text-surface hover:bg-danger-700 disabled:opacity-60"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden />
+                <span>{sedangMenghapus ? 'Menghapus...' : 'Ya, Hapus Akun'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ubah Kata Sandi Mandiri */}
+      <ModalUbahKataSandi
+        terbuka={modalGantiSandiBuka}
+        onTutup={() => setModalGantiSandiBuka(false)}
+        namaPengguna={profilAktif.nama}
+      />
     </div>
   );
 }

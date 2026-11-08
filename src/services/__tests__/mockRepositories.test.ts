@@ -231,4 +231,36 @@ describe('perbaikan repository laporan simulasi', () => {
     expect(penyimpanan.has('siput_kaltim_draf_form_simulasi_v1')).toBe(false);
     vi.unstubAllGlobals();
   });
+
+  it('mengizinkan Admin menghapus profil pengguna simulasi namun menolak hapus akun sendiri', async () => {
+    const admin = profil('admin');
+    const petugas = profil('petugas');
+
+    // Tambah satu pengguna simulasi untuk dihapus
+    const hasilTambah = await penggunaRepository.tambahSimulasi(
+      {
+        nama: 'Petugas Uji Hapus',
+        nip: '199901012020011999',
+        jabatan: 'Petugas Uji',
+        peran: 'petugas',
+        wilayahId: 'kab-kukar',
+        wkpp: 'WKPP Uji',
+      },
+      admin
+    );
+    expect(hasilTambah.ok).toBe(true);
+    if (!hasilTambah.ok) return;
+
+    // Petugas non-admin tidak berwenang menghapus
+    const tolakNonAdmin = await penggunaRepository.hapus(hasilTambah.data.id, petugas);
+    expect(tolakNonAdmin.ok).toBe(false);
+
+    // Admin tidak boleh menghapus dirinya sendiri
+    const tolakHapusDiri = await penggunaRepository.hapus(admin.id, admin);
+    expect(tolakHapusDiri.ok).toBe(false);
+
+    // Admin berhasil menghapus pengguna
+    const hasilHapus = await penggunaRepository.hapus(hasilTambah.data.id, admin);
+    expect(hasilHapus.ok).toBe(true);
+  });
 });

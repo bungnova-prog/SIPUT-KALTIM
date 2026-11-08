@@ -490,6 +490,34 @@ export const authService: AuthService = {
       return () => undefined;
     }
   },
+
+  async ubahKataSandi(kataSandiBaru: string): Promise<Hasil<void>> {
+    const sandiBersih = kataSandiBaru.trim();
+    if (!sandiBersih || sandiBersih.length < 6) {
+      return { ok: false, pesan: 'Kata sandi baru minimal 6 karakter.' };
+    }
+    if (!apakahKonfigurasiSupabaseLengkap()) {
+      return { ok: true, data: undefined };
+    }
+    try {
+      const klien = ambilKlienSupabase();
+      const { error } = await klien.auth.updateUser({
+        password: sandiBersih,
+      });
+      if (error) {
+        return {
+          ok: false,
+          pesan: terjemahkanGalat(error, 'Gagal memperbarui kata sandi pengguna.'),
+        };
+      }
+      return { ok: true, data: undefined };
+    } catch (err) {
+      return {
+        ok: false,
+        pesan: terjemahkanGalat(err, 'Terjadi gangguan saat memperbarui kata sandi.'),
+      };
+    }
+  },
 };
 
 export const wilayahRepository: WilayahRepository = {
@@ -1927,7 +1955,7 @@ export const penggunaRepository: PenggunaRepository = {
         wilayahRepository.semuaWilayah(),
       ]);
 
-      const kataSandi = (input.kataSandi ?? '').trim() || 'PoptKaltim2026!';
+      const kataSandi = (input.kataSandi ?? '').trim() || 'Perlindungan.1!';
       const url = String(import.meta.env.VITE_SUPABASE_URL ?? '').trim();
       const anonKey = String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim();
 
@@ -2065,6 +2093,56 @@ export const penggunaRepository: PenggunaRepository = {
       return {
         ok: false,
         pesan: terjemahkanGalat(err, 'Gagal memperbarui status aktif pengguna.'),
+      };
+    }
+  },
+
+  async hapus(id: string, peminta: ProfilPengguna): Promise<Hasil<void>> {
+    if (peminta.peran !== 'admin') {
+      return { ok: false, pesan: 'Hanya Admin Provinsi yang berwenang menghapus pengguna.' };
+    }
+    if (id === peminta.id) {
+      return { ok: false, pesan: 'Anda tidak dapat menghapus akun Anda sendiri saat sedang masuk.' };
+    }
+
+    try {
+      const klien = ambilKlienSupabase();
+
+      // 1. Periksa apakah pengguna memiliki riwayat laporan terkait
+      const { count, error: galatHitung } = await klien
+        .from('laporan')
+        .select('id', { count: 'exact', head: true })
+        .eq('petugas_id', id);
+
+      if (!galatHitung && typeof count === 'number' && count > 0) {
+        return {
+          ok: false,
+          pesan: `Akun ini telah mencatat ${count} laporan serangan OPT. Demi integritas audit riwayat dinas, akun tidak dapat dihapus permanen. Silakan gunakan tombol Nonaktifkan.`,
+        };
+      }
+
+      // 2. Hapus baris dari public.profiles
+      const { error: galatHapus } = await klien
+        .from('profiles')
+        .delete()
+        .eq('id', id);
+
+      if (galatHapus) {
+        return {
+          ok: false,
+          pesan: terjemahkanGalat(
+            galatHapus,
+            'Gagal menghapus profil pengguna. Pastikan kebijakan penghapusan akun diizinkan pada Supabase.'
+          ),
+        };
+      }
+
+      pelangganLokalPengguna.forEach((cb) => cb());
+      return { ok: true, data: undefined };
+    } catch (err) {
+      return {
+        ok: false,
+        pesan: terjemahkanGalat(err, 'Terjadi kesalahan saat menghapus pengguna.'),
       };
     }
   },
