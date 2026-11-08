@@ -53,6 +53,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/) dan
 - Helper transisi status laporan (`src/lib/alurLaporan.ts`) dan perhitungan bulan WITA (`src/lib/waktuWita.ts`).
 
 ### Diubah
+- Mengizinkan peran Operator untuk memilih wilayah "Provinsi Kalimantan Timur (Lintas Wilayah)" pada formulir pendaftaran pengguna, memperbarui validasi backend agar hanya Petugas Lapangan yang wajib terikat pada satu Kabupaten/Kota, serta menyesuaikan batasan database `chk_wilayah_peran` dan kebijakan RLS agar Operator Lintas Wilayah dapat membaca dan memverifikasi laporan di seluruh wilayah Kaltim.
 - Mengubah kata sandi awal bawaan pendaftaran petugas menjadi `Perlindungan.1!` (pada formulir pendaftaran Admin dan fallback layanan backend) serta menyediakan alur perubahan kata sandi secara mandiri oleh setiap petugas/operator.
 - Mengubah kepanjangan nama SIPUT menjadi **Sistem Informasi Pelaporan OPT** di seluruh halaman antarmuka (`HalamanMasuk`, `TataLetakUtama`), judul dokumen HTML (`index.html`), deskripsi `package.json`, dan lembar ekspor laporan (`src/lib/ekspor.ts`).
 - Mengubah alur pendaftaran pengguna baru di `src/services/supabaseRepositories.ts` dan `src/pages/HalamanPengguna.tsx`: Admin dapat langsung mendaftarkan dan menyimpan akun petugas/operator beserta kata sandinya ke Supabase Auth dan tabel `profiles` tanpa memerlukan Edge Function atau tautan undangan email.

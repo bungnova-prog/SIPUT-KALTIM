@@ -1343,9 +1343,9 @@ export const penggunaRepository: PenggunaRepository = {
     if (!input.nama.trim()) {
       return { ok: false, pesan: 'Nama pengguna wajib diisi.' };
     }
-    if (input.peran !== 'admin') {
+    if (input.peran === 'petugas') {
       if (!input.wilayahId) {
-        return { ok: false, pesan: 'Wilayah kabupaten/kota wajib dipilih untuk Operator atau Petugas.' };
+        return { ok: false, pesan: 'Wilayah kabupaten/kota wajib dipilih untuk Petugas Lapangan.' };
       }
       const wilayah = dbWilayah.find((w) => w.id === input.wilayahId && w.tipe === 'kabupaten');
       if (!wilayah) {
@@ -1368,13 +1368,15 @@ export const penggunaRepository: PenggunaRepository = {
       nipSimulasi = `SIM-USR-${String(urut).padStart(4, '0')}`;
     }
 
+    const idWilayahFinal = input.peran === 'admin' || !input.wilayahId ? null : input.wilayahId;
+
     const barisBaru: DbProfileRow = {
       id: `usr-sim-${Date.now()}`,
       nama: namaSimulasi,
       nip: nipSimulasi,
       jabatan: input.jabatan.trim() || 'Petugas Proteksi Perkebunan (Simulasi)',
       peran: input.peran,
-      wilayah_id: input.peran === 'admin' ? null : input.wilayahId,
+      wilayah_id: idWilayahFinal,
       wkpp: input.wkpp.trim() || 'Wilayah Kerja Simulasi',
       aktif: true,
     };

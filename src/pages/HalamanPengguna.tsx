@@ -107,7 +107,7 @@ export default function HalamanPengguna() {
         nip: nipBaru,
         jabatan: jabatanBaru,
         peran: peranBaru,
-        wilayahId: peranBaru === 'admin' ? null : wilayahBaruId,
+        wilayahId: peranBaru === 'admin' || !wilayahBaruId ? null : wilayahBaruId,
         wkpp: wkppBaru,
       },
       profilAktif
@@ -311,7 +311,22 @@ export default function HalamanPengguna() {
                 <select
                   id="input-usr-peran"
                   value={peranBaru}
-                  onChange={(e) => setPeranBaru(e.target.value as Peran)}
+                  onChange={(e) => {
+                    const p = e.target.value as Peran;
+                    setPeranBaru(p);
+                    if (p === 'admin') {
+                      setWilayahBaruId('');
+                      setWkppBaru('Dinas Perkebunan Prov. Kaltim');
+                    } else if (p === 'operator') {
+                      setWilayahBaruId('');
+                      setWkppBaru('UPTD Proteksi Perkebunan Prov. Kaltim');
+                    } else if (p === 'petugas') {
+                      if (!wilayahBaruId && daftarKabupaten.length > 0) {
+                        setWilayahBaruId(daftarKabupaten[0].id);
+                      }
+                      setWkppBaru('');
+                    }
+                  }}
                   className="mt-1 min-h-[44px] w-full rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink-900"
                 >
                   <option value="petugas">Petugas POPT Lapangan</option>
@@ -334,15 +349,25 @@ export default function HalamanPengguna() {
                   onChange={(e) => setWilayahBaruId(e.target.value)}
                   className="mt-1 min-h-[44px] w-full rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink-900 disabled:bg-canvas disabled:text-ink-600"
                 >
-                  {peranBaru === 'admin' ? (
+                  {peranBaru === 'admin' && (
                     <option value="">Provinsi Kalimantan Timur (Lintas Wilayah)</option>
-                  ) : (
+                  )}
+                  {peranBaru === 'operator' && (
+                    <>
+                      <option value="">Provinsi Kalimantan Timur (Lintas Wilayah)</option>
+                      {daftarKabupaten.map((kab) => (
+                        <option key={kab.id} value={kab.id}>
+                          {kab.nama}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                  {peranBaru === 'petugas' &&
                     daftarKabupaten.map((kab) => (
                       <option key={kab.id} value={kab.id}>
                         {kab.nama}
                       </option>
-                    ))
-                  )}
+                    ))}
                 </select>
               </div>
 

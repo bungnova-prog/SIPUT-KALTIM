@@ -1,14 +1,23 @@
 -- ============================================================================
 -- SIPUT-KALTIM: AKTIFKAN PENDAFTARAN & PENGHAPUSAN AKUN LANGSUNG OLEH ADMIN
+-- Serta Mendukung Operator Tingkat Provinsi / Lintas Wilayah Kaltim
 -- Jalankan seluruh skrip ini di SQL Editor Supabase (https://supabase.com/dashboard)
--- Fungsi ini memungkinkan Admin mendaftarkan & menghapus akun petugas langsung
--- tanpa batasan email, tanpa email konfirmasi, dan bebas error rate limit!
 -- ============================================================================
 
 -- 1. Pastikan ekstensi pgcrypto aktif untuk enkripsi password bcrypt
 create extension if not exists pgcrypto with schema extensions;
 
--- 2. Kebijakan RLS Tambah & Hapus untuk Admin di tabel public.profiles
+-- 2. Penyesuaian constraint tabel profiles:
+-- Operator kini diperbolehkan wilayah_id null (Provinsi Kaltim / Lintas Wilayah)
+-- maupun memilih Kabupaten/Kota tertentu.
+alter table public.profiles drop constraint if exists chk_wilayah_peran;
+alter table public.profiles add constraint chk_wilayah_peran check (
+  (peran = 'admin' and wilayah_id is null)
+  or (peran = 'operator')
+  or (peran = 'petugas' and wilayah_id is not null)
+);
+
+-- 3. Kebijakan RLS Tambah & Hapus untuk Admin di tabel public.profiles
 drop policy if exists profiles_tambah_admin on public.profiles;
 create policy profiles_tambah_admin on public.profiles
   for insert to authenticated
@@ -19,7 +28,81 @@ create policy profiles_hapus_admin on public.profiles
   for delete to authenticated
   using (public.peran_saya() = 'admin');
 
--- 3. Fungsi Database: Admin Tambah Pengguna Langsung
+-- 4. Kebijakan RLS Profiles: Operator Lintas Wilayah dapat melihat seluruh profil
+drop policy if exists profiles_baca on public.profiles;
+create policy profiles_baca on public.profiles
+  for select to authenticated
+  using (
+    id = auth.uid()
+    or public.peran_saya() = 'admin'
+    or (
+      public.peran_saya() = 'operator'
+      and (
+        public.kabupaten_saya() is null
+        or wilayah_id = public.kabupaten_saya()
+      )
+      and peran <> 'admin'
+    )
+    or (
+      public.peran_saya() = 'petugas'
+      and wilayah_id = public.kabupaten_saya()
+      and peran <> 'admin'
+    )
+  );
+
+-- 5. Kebijakan RLS Laporan: Operator Lintas Wilayah dapat membaca & memverifikasi laporan se-Kaltim
+drop policy if exists laporan_baca on public.laporan;
+create policy laporan_baca on public.laporan
+  for select to authenticated
+  using (
+    public.peran_saya() = 'admin'
+    or (
+      public.peran_saya() = 'operator'
+      and (
+        public.kabupaten_saya() is null
+        or public.kabupaten_dari_desa(desa_id) = public.kabupaten_saya()
+      )
+      and (status <> 'draf' or petugas_id = auth.uid())
+    )
+    or (
+      public.peran_saya() = 'petugas'
+      and (
+        petugas_id = auth.uid()
+        or (
+          public.kabupaten_dari_desa(desa_id) = public.kabupaten_saya()
+          and status <> 'draf'
+        )
+      )
+    )
+  );
+
+drop policy if exists laporan_verifikasi_operator on public.laporan;
+create policy laporan_verifikasi_operator on public.laporan
+  for update to authenticated
+  using (
+    (
+      public.peran_saya() = 'operator'
+      and (
+        public.kabupaten_saya() is null
+        or public.kabupaten_dari_desa(desa_id) = public.kabupaten_saya()
+      )
+      and status in ('menunggu', 'terverifikasi', 'ditolak')
+    )
+    or public.peran_saya() = 'admin'
+  )
+  with check (
+    (
+      public.peran_saya() = 'operator'
+      and (
+        public.kabupaten_saya() is null
+        or public.kabupaten_dari_desa(desa_id) = public.kabupaten_saya()
+      )
+      and status in ('menunggu', 'terverifikasi', 'ditolak')
+    )
+    or public.peran_saya() = 'admin'
+  );
+
+-- 6. Fungsi Database: Admin Tambah Pengguna Langsung
 create or replace function public.admin_tambah_pengguna(
   p_email text,
   p_kata_sandi text,
@@ -62,7 +145,7 @@ begin
     );
   end if;
 
-  -- 2. Cek apakah user sudah ada di auth.users
+  -- 2. Cek apakah akun sudah ada di auth.users
   select id into v_user_id
   from auth.users
   where lower(email) = lower(trim(p_email));
@@ -70,7 +153,7 @@ begin
   v_encrypted_pw := extensions.crypt(trim(p_kata_sandi), extensions.gen_salt('bf'));
 
   if v_user_id is not null then
-    -- Perbarui kata sandi dan pastikan email terkonfirmasi
+    -- Perbarui sandi dan pastikan email terkonfirmasi
     update auth.users
     set encrypted_password = v_encrypted_pw,
         email_confirmed_at = coalesce(email_confirmed_at, now()),
@@ -133,7 +216,8 @@ begin
     end;
   end if;
 
-  -- 3. Simpan / perbarui ke tabel public.profiles
+  -- 3. Simpan atau perbarui profil di public.profiles
+  -- Untuk admin atau operator lintas wilayah, wilayah_id bernilai null
   insert into public.profiles (
     id,
     nama,
@@ -149,7 +233,7 @@ begin
     nullif(trim(p_nip), ''),
     coalesce(nullif(trim(p_jabatan), ''), case when p_peran = 'petugas' then 'Petugas Lapangan' else 'Operator UPTD' end),
     p_peran::public.peran,
-    case when p_peran = 'admin' then null else p_wilayah_id end,
+    case when p_peran = 'admin' or p_wilayah_id is null then null else p_wilayah_id end,
     coalesce(nullif(trim(p_wkpp), ''), 'Wilayah Kerja'),
     true
   )
@@ -175,7 +259,7 @@ exception when others then
 end;
 $$;
 
--- 4. Fungsi Database: Admin Hapus Pengguna
+-- 7. Fungsi Database: Admin Hapus Pengguna
 create or replace function public.admin_hapus_pengguna(
   p_target_id uuid
 )

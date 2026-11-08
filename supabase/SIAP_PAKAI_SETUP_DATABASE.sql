@@ -86,7 +86,8 @@ create table if not exists public.profiles (
   dibuat_pada timestamptz not null default now(),
   constraint chk_wilayah_peran check (
     (peran = 'admin' and wilayah_id is null)
-    or (peran in ('operator', 'petugas') and wilayah_id is not null)
+    or (peran = 'operator')
+    or (peran = 'petugas' and wilayah_id is not null)
   )
 );
 
@@ -1108,7 +1109,7 @@ begin
     v_user_id, trim(p_nama), nullif(trim(p_nip), ''),
     coalesce(nullif(trim(p_jabatan), ''), case when p_peran = 'petugas' then 'Petugas Lapangan' else 'Operator UPTD' end),
     p_peran::public.peran,
-    case when p_peran = 'admin' then null else p_wilayah_id end,
+    case when p_peran = 'admin' or p_wilayah_id is null then null else p_wilayah_id end,
     coalesce(nullif(trim(p_wkpp), ''), 'Wilayah Kerja'),
     true
   )

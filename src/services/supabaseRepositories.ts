@@ -1947,10 +1947,10 @@ export const penggunaRepository: PenggunaRepository = {
     if (!input.nama.trim()) {
       return { ok: false, pesan: 'Nama lengkap pengguna wajib diisi.' };
     }
-    if (input.peran !== 'admin' && !input.wilayahId) {
+    if (input.peran === 'petugas' && !input.wilayahId) {
       return {
         ok: false,
-        pesan: 'Wilayah kerja Kabupaten/Kota wajib dipilih untuk Operator atau Petugas.',
+        pesan: 'Wilayah kerja Kabupaten/Kota wajib dipilih untuk Petugas Lapangan.',
       };
     }
 
@@ -1961,6 +1961,7 @@ export const penggunaRepository: PenggunaRepository = {
       ]);
 
       const kataSandi = (input.kataSandi ?? '').trim() || 'Perlindungan.1!';
+      const idWilayahFinal = input.peran === 'admin' || !input.wilayahId ? null : input.wilayahId;
       const daftarWilayah = wilHasil.ok ? wilHasil.data : [];
 
       // METODE 1: Jalankan RPC admin_tambah_pengguna (Langsung ke DB, bypass pembatasan email/rate limit)
@@ -1972,7 +1973,7 @@ export const penggunaRepository: PenggunaRepository = {
           p_nip: input.nip.trim() || null,
           p_jabatan: input.jabatan.trim() || '',
           p_peran: input.peran,
-          p_wilayah_id: input.peran === 'admin' ? null : input.wilayahId,
+          p_wilayah_id: idWilayahFinal,
           p_wkpp: input.wkpp.trim() || '',
         });
         const rpcRes = rawRpcData as {
@@ -2053,7 +2054,7 @@ export const penggunaRepository: PenggunaRepository = {
         nip: input.nip.trim() || null,
         jabatan: input.jabatan.trim() || (input.peran === 'petugas' ? 'Petugas Lapangan' : 'Operator UPTD'),
         peran: input.peran,
-        wilayah_id: input.peran === 'admin' ? null : input.wilayahId,
+        wilayah_id: idWilayahFinal,
         wkpp: input.wkpp.trim() || 'Wilayah Kerja',
         aktif: true,
       };
