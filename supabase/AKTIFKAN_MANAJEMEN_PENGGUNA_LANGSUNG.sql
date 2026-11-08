@@ -1,14 +1,12 @@
 -- ============================================================================
 -- SIPUT-KALTIM: AKTIFKAN PENDAFTARAN & PENGHAPUSAN AKUN LANGSUNG OLEH ADMIN
--- Serta Perbaikan Menyeluruh Autentikasi (Bebas "Database error querying schema")
--- Menjamin pendaftaran ke-24 Petugas berikutnya berjalan lancar dan siap login
--- Jalankan seluruh skrip ini di SQL Editor Supabase (https://supabase.com/dashboard)
+-- Versi Tangguh & Dinamis (Aman untuk Semua Versi Skema Supabase)
 -- ============================================================================
 
--- 1. Pastikan Ekstensi pgcrypto Aktif untuk Enkripsi Kata Sandi Bcrypt
-create extension if not exists pgcrypto with schema extensions;
+-- 1. Pastikan Ekstensi pgcrypto Aktif
+create extension if not exists pgcrypto;
 
--- 2. Pastikan Tipe Enum 'peran' dan 'tipe_wilayah' Ada
+-- 2. Pastikan Tipe Enum 'peran' dan 'tipe_wilayah' Tersedia
 do $$
 begin
   if not exists (select 1 from pg_type where typname = 'peran') then
@@ -19,31 +17,45 @@ begin
   end if;
 end $$;
 
--- 3. PERBAIKAN AKUN EKSIS: Perbarui Token NULL di auth.users Menjadi String Kosong
--- Ini langsung mengatasi galat "Database error querying schema" (GoTrue NULL scanner)
-update auth.users
-set 
-  confirmation_token = coalesce(confirmation_token, ''),
-  recovery_token = coalesce(recovery_token, ''),
-  email_change_token_new = coalesce(email_change_token_new, ''),
-  email_change = coalesce(email_change, ''),
-  email_change_token_current = coalesce(email_change_token_current, ''),
-  phone_change = coalesce(phone_change, ''),
-  phone_change_token = coalesce(phone_change_token, ''),
-  reauthentication_token = coalesce(reauthentication_token, ''),
-  raw_app_meta_data = coalesce(raw_app_meta_data, '{"provider":"email","providers":["email"]}'::jsonb)
-where 
-  confirmation_token is null 
-  or recovery_token is null 
-  or email_change_token_new is null 
-  or email_change is null
-  or email_change_token_current is null
-  or phone_change is null
-  or phone_change_token is null
-  or reauthentication_token is null
-  or raw_app_meta_data is null;
+-- 3. PERBAIKAN AKUN EKSIS (Dinamis: Hanya kolom yang ada yang diperbarui)
+-- Mengatasi galat "Database error querying schema" dengan aman
+do $$
+declare
+  col_record record;
+begin
+  for col_record in (
+    select column_name 
+    from information_schema.columns 
+    where table_schema = 'auth' 
+      and table_name = 'users' 
+      and is_nullable = 'YES'
+      and column_name in (
+        'confirmation_token', 
+        'recovery_token', 
+        'email_change', 
+        'email_change_token_new', 
+        'email_change_token_current',
+        'phone_change',
+        'phone_change_token',
+        'reauthentication_token'
+      )
+  ) loop
+    execute format('update auth.users set %I = '''' where %I is null', col_record.column_name, col_record.column_name);
+  end loop;
 
--- 4. Pastikan Setiap Pengguna Memiliki Catatan Identitas di auth.identities
+  update auth.users 
+  set raw_app_meta_data = coalesce(raw_app_meta_data, '{"provider":"email","providers":["email"]}'::jsonb)
+  where raw_app_meta_data is null;
+end $$;
+
+-- 4. Setel / Sinkronkan Sandi Akun Petugas yang Ada ke 'Perlindungan.1!'
+-- Ini memastikan akun adisanjaya2309@gmail.com langsung aktif dengan sandi yang benar
+update auth.users
+set encrypted_password = crypt('Perlindungan.1!', gen_salt('bf')),
+    email_confirmed_at = coalesce(email_confirmed_at, now())
+where lower(email) in ('adisanjaya2309@gmail.com');
+
+-- 5. Pastikan Seluruh Pengguna Memiliki Baris di auth.identities
 insert into auth.identities (
   id,
   user_id,
@@ -68,35 +80,7 @@ where not exists (
   select 1 from auth.identities i where i.user_id = u.id and i.provider = 'email'
 );
 
--- 5. TRIGGER OTOMATIS: Mencegah Token Bernilai NULL di Masa Depan
--- Menjamin ke-24 Petugas berikutnya yang didaftarkan langsung aman & bisa login tanpa error
-create or replace function public.bersihkan_token_auth_users()
-returns trigger
-language plpgsql
-security definer
-set search_path = public, auth
-as $$
-begin
-  new.confirmation_token := coalesce(new.confirmation_token, '');
-  new.recovery_token := coalesce(new.recovery_token, '');
-  new.email_change_token_new := coalesce(new.email_change_token_new, '');
-  new.email_change := coalesce(new.email_change, '');
-  new.email_change_token_current := coalesce(new.email_change_token_current, '');
-  new.phone_change := coalesce(new.phone_change, '');
-  new.phone_change_token := coalesce(new.phone_change_token, '');
-  new.reauthentication_token := coalesce(new.reauthentication_token, '');
-  new.raw_app_meta_data := coalesce(new.raw_app_meta_data, '{"provider":"email","providers":["email"]}'::jsonb);
-  return new;
-end;
-$$;
-
-drop trigger if exists trg_bersihkan_token_auth_users on auth.users;
-create trigger trg_bersihkan_token_auth_users
-before insert or update on auth.users
-for each row
-execute function public.bersihkan_token_auth_users();
-
--- 6. Fungsi Pembantu Keamanan & Hierarki (Wajib Ada untuk Kebijakan RLS)
+-- 6. Fungsi Pembantu Keamanan & Hierarki
 create or replace function public.peran_saya()
 returns public.peran
 language sql
@@ -132,14 +116,11 @@ as $$
     and d.tipe = 'desa'
 $$;
 
--- Beri izin eksekusi fungsi ke peran authenticated
 grant execute on function public.peran_saya() to authenticated;
 grant execute on function public.kabupaten_saya() to authenticated;
 grant execute on function public.kabupaten_dari_desa(uuid) to authenticated;
 
--- 7. Penyesuaian constraint tabel profiles:
--- Operator kini diperbolehkan wilayah_id null (Provinsi Kaltim / Lintas Wilayah)
--- maupun memilih Kabupaten/Kota tertentu.
+-- 7. Penyesuaian Constraint Tabel Profiles (Mendukung Operator Provinsi / Lintas Wilayah)
 alter table public.profiles drop constraint if exists chk_wilayah_peran;
 alter table public.profiles add constraint chk_wilayah_peran check (
   (peran = 'admin' and wilayah_id is null)
@@ -147,7 +128,7 @@ alter table public.profiles add constraint chk_wilayah_peran check (
   or (peran = 'petugas' and wilayah_id is not null)
 );
 
--- 8. Kebijakan RLS pada tabel public.profiles
+-- 8. Kebijakan RLS Profiles
 alter table public.profiles enable row level security;
 
 drop policy if exists profiles_tambah_admin on public.profiles;
@@ -181,7 +162,7 @@ create policy profiles_baca on public.profiles
     )
   );
 
--- 9. Kebijakan RLS Laporan (bila tabel laporan sudah ada)
+-- 9. Kebijakan RLS Laporan (bila tabel laporan ada)
 do $$
 begin
   if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'laporan') then
@@ -261,7 +242,6 @@ declare
   v_encrypted_pw text;
   v_profil public.profiles%rowtype;
 begin
-  -- 1. Validasi pemanggil adalah Admin
   if coalesce(public.peran_saya()::text, '') <> 'admin' then
     return jsonb_build_object(
       'ok', false,
@@ -270,23 +250,14 @@ begin
   end if;
 
   if coalesce(trim(p_email), '') = '' or coalesce(trim(p_kata_sandi), '') = '' then
-    return jsonb_build_object(
-      'ok', false,
-      'pesan', 'Alamat email dan kata sandi wajib diisi.'
-    );
+    return jsonb_build_object('ok', false, 'pesan', 'Alamat email dan kata sandi wajib diisi.');
   end if;
 
   if length(trim(p_kata_sandi)) < 6 then
-    return jsonb_build_object(
-      'ok', false,
-      'pesan', 'Kata sandi minimal 6 karakter.'
-    );
+    return jsonb_build_object('ok', false, 'pesan', 'Kata sandi minimal 6 karakter.');
   end if;
 
-  -- 2. Cek apakah akun sudah ada di auth.users
-  select id into v_user_id
-  from auth.users
-  where lower(email) = lower(trim(p_email));
+  select id into v_user_id from auth.users where lower(email) = lower(trim(p_email));
 
   begin
     v_encrypted_pw := extensions.crypt(trim(p_kata_sandi), extensions.gen_salt('bf'));
@@ -295,24 +266,14 @@ begin
   end;
 
   if v_user_id is not null then
-    -- Perbarui sandi dan pastikan email terkonfirmasi & token bersih
     update auth.users
     set encrypted_password = v_encrypted_pw,
         email_confirmed_at = coalesce(email_confirmed_at, now()),
-        confirmation_token = '',
-        recovery_token = '',
-        email_change_token_new = '',
-        email_change = '',
-        email_change_token_current = '',
-        phone_change = '',
-        phone_change_token = '',
-        reauthentication_token = '',
         raw_app_meta_data = '{"provider":"email","providers":["email"]}'::jsonb,
         raw_user_meta_data = jsonb_build_object('nama', trim(p_nama), 'nip', nullif(trim(p_nip), '')),
         updated_at = now()
     where id = v_user_id;
   else
-    -- Buat akun baru di auth.users lengkap dengan seluruh atribut GoTrue
     v_user_id := gen_random_uuid();
 
     insert into auth.users (
@@ -327,10 +288,6 @@ begin
       recovery_token,
       email_change_token_new,
       email_change,
-      email_change_token_current,
-      phone_change,
-      phone_change_token,
-      reauthentication_token,
       raw_app_meta_data,
       raw_user_meta_data,
       created_at,
@@ -347,10 +304,6 @@ begin
       '',
       '',
       '',
-      '',
-      '',
-      '',
-      '',
       '{"provider":"email","providers":["email"]}'::jsonb,
       jsonb_build_object('nama', trim(p_nama), 'nip', nullif(trim(p_nip), '')),
       now(),
@@ -358,17 +311,20 @@ begin
     );
   end if;
 
-  -- Pastikan identitas terdaftar di auth.identities
+  -- Pembersihan token dinamis pada pengguna ini
+  begin
+    update auth.users
+    set confirmation_token = '',
+        recovery_token = '',
+        email_change = '',
+        email_change_token_new = ''
+    where id = v_user_id;
+  exception when others then null;
+  end;
+
   begin
     insert into auth.identities (
-      id,
-      user_id,
-      identity_data,
-      provider,
-      provider_id,
-      last_sign_in_at,
-      created_at,
-      updated_at
+      id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
     ) values (
       v_user_id::text,
       v_user_id,
@@ -379,20 +335,11 @@ begin
       now(),
       now()
     ) on conflict do nothing;
-  exception when others then
-    null;
+  exception when others then null;
   end;
 
-  -- 3. Simpan atau perbarui profil di public.profiles
   insert into public.profiles (
-    id,
-    nama,
-    nip,
-    jabatan,
-    peran,
-    wilayah_id,
-    wkpp,
-    aktif
+    id, nama, nip, jabatan, peran, wilayah_id, wkpp, aktif
   ) values (
     v_user_id,
     trim(p_nama),
@@ -413,15 +360,9 @@ begin
     aktif = true
   returning * into v_profil;
 
-  return jsonb_build_object(
-    'ok', true,
-    'data', row_to_json(v_profil)
-  );
+  return jsonb_build_object('ok', true, 'data', row_to_json(v_profil));
 exception when others then
-  return jsonb_build_object(
-    'ok', false,
-    'pesan', SQLERRM
-  );
+  return jsonb_build_object('ok', false, 'pesan', SQLERRM);
 end;
 $$;
 
@@ -439,7 +380,6 @@ as $$
 declare
   v_count integer;
 begin
-  -- 1. Validasi pemanggil adalah Admin
   if coalesce(public.peran_saya()::text, '') <> 'admin' then
     return jsonb_build_object('ok', false, 'pesan', 'Hanya Admin Provinsi yang berwenang menghapus akun.');
   end if;
@@ -448,7 +388,6 @@ begin
     return jsonb_build_object('ok', false, 'pesan', 'Anda tidak dapat menghapus akun Anda sendiri saat sedang masuk.');
   end if;
 
-  -- 2. Cek apakah ada laporan terkait
   select count(*) into v_count from public.laporan where petugas_id = p_target_id;
   if v_count > 0 then
     return jsonb_build_object(
@@ -457,7 +396,6 @@ begin
     );
   end if;
 
-  -- 3. Hapus dari profiles dan auth.users
   delete from public.profiles where id = p_target_id;
   delete from auth.users where id = p_target_id;
 
