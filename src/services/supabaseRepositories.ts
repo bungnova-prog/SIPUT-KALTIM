@@ -221,8 +221,14 @@ export function bersihkanCacheSesiSupabase(): void {
 
 function terjemahkanGalat(err: unknown, pesanBawaan: string): string {
   if (!err) return pesanBawaan;
+  let msg = '';
   if (err instanceof Error) {
-    const msg = err.message;
+    msg = err.message;
+  } else if (typeof err === 'object' && err !== null && 'message' in err) {
+    msg = String((err as { message: unknown }).message || '');
+  }
+
+  if (msg) {
     if (msg.includes('Invalid login credentials')) {
       return 'Email atau kata sandi tidak sesuai. Periksa kembali kredensial akun Anda.';
     }
@@ -232,20 +238,19 @@ function terjemahkanGalat(err: unknown, pesanBawaan: string): string {
     if (msg.includes('row-level security') || msg.includes('permission denied')) {
       return 'Akses ditolak oleh kebijakan keamanan wilayah/peran (Row Level Security).';
     }
-    if (msg.includes('Konfigurasi VITE_SUPABASE_URL')) {
-      return msg;
+    if (msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) {
+      return 'Batas pengiriman email autentikasi Supabase terlampaui. Silakan gunakan fungsi RPC admin_tambah_pengguna melalui berkas SQL di Supabase SQL Editor.';
     }
-    // Pesan raise exception berbahasa Indonesia dari trigger PostgreSQL diteruskan apa adanya
-    if (
-      msg.includes('Petugas') ||
-      msg.includes('Laporan') ||
-      msg.includes('Lokasi') ||
-      msg.includes('Jenis OPT') ||
-      msg.includes('Penolakan') ||
-      msg.includes('Perubahan terhadap')
-    ) {
-      return msg;
+    if (msg.includes('User already registered') || msg.includes('already registered')) {
+      return 'Pengguna dengan alamat email ini sudah terdaftar di sistem autentikasi.';
     }
+    if (msg.includes('Signups not allowed')) {
+      return 'Pendaftaran akun baru ditutup pada pengaturan Supabase (Authentication > Providers > Email).';
+    }
+    if (msg.includes('Password should be at least')) {
+      return 'Kata sandi minimal 6 karakter.';
+    }
+    return msg;
   }
   return pesanBawaan;
 }
@@ -1956,13 +1961,46 @@ export const penggunaRepository: PenggunaRepository = {
       ]);
 
       const kataSandi = (input.kataSandi ?? '').trim() || 'Perlindungan.1!';
+      const daftarWilayah = wilHasil.ok ? wilHasil.data : [];
+
+      // METODE 1: Jalankan RPC admin_tambah_pengguna (Langsung ke DB, bypass pembatasan email/rate limit)
+      try {
+        const { data: rawRpcData, error: rpcErr } = await klien.rpc('admin_tambah_pengguna', {
+          p_email: email,
+          p_kata_sandi: kataSandi,
+          p_nama: input.nama.trim(),
+          p_nip: input.nip.trim() || null,
+          p_jabatan: input.jabatan.trim() || '',
+          p_peran: input.peran,
+          p_wilayah_id: input.peran === 'admin' ? null : input.wilayahId,
+          p_wkpp: input.wkpp.trim() || '',
+        });
+        const rpcRes = rawRpcData as {
+          ok: boolean;
+          pesan?: string;
+          data?: BarisDbProfil;
+        } | null;
+
+        if (!rpcErr && rpcRes) {
+          if (!rpcRes.ok || !rpcRes.data) {
+            return {
+              ok: false,
+              pesan: rpcRes.pesan ?? 'Gagal menyimpan akun pengguna.',
+            };
+          }
+          pelangganLokalPengguna.forEach((cb) => cb());
+          return { ok: true, data: petakanProfil(rpcRes.data, daftarWilayah) };
+        }
+      } catch {
+        // Lanjutkan ke fallback jika RPC gagal atau belum terpasang
+      }
+
+      // METODE 2 (Fallback): Menggunakan Supabase Auth client jika RPC belum dipasang di database
       const url = String(import.meta.env.VITE_SUPABASE_URL ?? '').trim();
       const anonKey = String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim();
 
       let userId: string | null = null;
 
-      // 1. Daftarkan akun baru ke auth.users memakai klien pendaftaran sekunder
-      // agar sesi aktif Admin yang sedang login tidak tertimpa/terputus.
       if (url && anonKey) {
         try {
           const klienDaftar = createClient(url, anonKey, {
@@ -1986,29 +2024,11 @@ export const penggunaRepository: PenggunaRepository = {
 
           if (!authGalat && authData?.user?.id) {
             userId = authData.user.id;
-          } else if (authGalat?.message?.toLowerCase().includes('already registered')) {
-            // Periksa apakah pengguna dengan NIP ini sudah ada di profiles
-            if (input.nip.trim()) {
-              const { data: profilAda } = await klien
-                .from('profiles')
-                .select('id')
-                .eq('nip', input.nip.trim())
-                .maybeSingle();
-
-              if (profilAda) {
-                return {
-                  ok: false,
-                  pesan: 'Pengguna dengan NIP ini sudah terdaftar di sistem.',
-                };
-              }
-            }
           } else if (authGalat) {
+            const pesanGalatAuth = authGalat.message || '';
             return {
               ok: false,
-              pesan: terjemahkanGalat(
-                authGalat,
-                'Gagal mendaftarkan akun autentikasi pengguna baru. Pastikan kata sandi minimal 6 karakter.'
-              ),
+              pesan: `Gagal mendaftarkan akun autentikasi: ${pesanGalatAuth}. Silakan jalankan skrip SQL "supabase/AKTIFKAN_MANAJEMEN_PENGGUNA_LANGSUNG.sql" di Supabase SQL Editor agar Admin dapat mendaftarkan akun secara langsung tanpa pembatasan email.`,
             };
           }
         } catch (errAuth) {
@@ -2019,11 +2039,16 @@ export const penggunaRepository: PenggunaRepository = {
         }
       }
 
-      const idProfilFinal = userId ?? crypto.randomUUID();
+      if (!userId) {
+        return {
+          ok: false,
+          pesan: 'ID akun autentikasi tidak ditemukan. Silakan jalankan skrip SQL "supabase/AKTIFKAN_MANAJEMEN_PENGGUNA_LANGSUNG.sql" di Supabase SQL Editor.',
+        };
+      }
 
       // 2. Simpan profil lengkap ke tabel public.profiles dengan hak Admin
       const barisInput = {
-        id: idProfilFinal,
+        id: userId,
         nama: input.nama.trim(),
         nip: input.nip.trim() || null,
         jabatan: input.jabatan.trim() || (input.peran === 'petugas' ? 'Petugas Lapangan' : 'Operator UPTD'),
@@ -2050,7 +2075,6 @@ export const penggunaRepository: PenggunaRepository = {
       }
 
       pelangganLokalPengguna.forEach((cb) => cb());
-      const daftarWilayah = wilHasil.ok ? wilHasil.data : [];
       return { ok: true, data: petakanProfil(barisProfilBaru, daftarWilayah) };
     } catch (err) {
       return {
@@ -2108,7 +2132,28 @@ export const penggunaRepository: PenggunaRepository = {
     try {
       const klien = ambilKlienSupabase();
 
-      // 1. Periksa apakah pengguna memiliki riwayat laporan terkait
+      // METODE 1: Coba panggil RPC admin_hapus_pengguna terlebih dahulu
+      try {
+        const { data: rawRpcHapus, error: rpcErr } = await klien.rpc('admin_hapus_pengguna', {
+          p_target_id: id,
+        });
+        const rpcRes = rawRpcHapus as {
+          ok: boolean;
+          pesan?: string;
+        } | null;
+
+        if (!rpcErr && rpcRes) {
+          if (!rpcRes.ok) {
+            return { ok: false, pesan: rpcRes.pesan ?? 'Gagal menghapus pengguna.' };
+          }
+          pelangganLokalPengguna.forEach((cb) => cb());
+          return { ok: true, data: undefined };
+        }
+      } catch {
+        // Lanjutkan ke fallback
+      }
+
+      // METODE 2 (Fallback): Periksa riwayat laporan dan hapus dari tabel profiles
       const { count, error: galatHitung } = await klien
         .from('laporan')
         .select('id', { count: 'exact', head: true })
@@ -2121,7 +2166,6 @@ export const penggunaRepository: PenggunaRepository = {
         };
       }
 
-      // 2. Hapus baris dari public.profiles
       const { error: galatHapus } = await klien
         .from('profiles')
         .delete()
