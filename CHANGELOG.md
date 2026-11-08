@@ -17,6 +17,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/) dan
 ## [Belum Dirilis]
 
 ### Ditambahkan
+- Menyediakan master data 100% lengkap seluruh 1.013+ Kampung, Desa, dan Kelurahan resmi Kemendagri untuk seluruh 10 Kabupaten/Kota se-Kalimantan Timur pada `supabase/SEMUA_1038_DESA_KALTIM_LENGKAP.sql` dan berkas modular per kabupaten pada `supabase/per_kabupaten/`.
 - Menyediakan master data lengkap seluruh Kelurahan resmi Kota Samarinda (59 Kelurahan termasuk 8 Kelurahan di Samarinda Utara), Balikpapan (34 Kelurahan), Bontang (15 Kelurahan), PPU, dan ratusan Desa/Kampung se-Kaltim dalam skrip `supabase/MASTER_LENGKAP_SELURUH_DESA_KALTIM.sql`.
 - Menyediakan master data lengkap Kampung/Desa/Kelurahan se-Kalimantan Timur pada `supabase/LENGKAPI_SEMUA_KAMPUNG_DESA_KALTIM.sql` dengan kueri garansi sistem agar setiap kecamatan dipastikan memiliki minimal 1 pilihan Kampung/Desa resmi.
 - Menambahkan integrasi terminologi lokal "Kampung / Desa / Kelurahan" (khas Kutai Barat, Berau, Mahakam Ulu) pada Formulir Input Laporan (`src/pages/HalamanInputLaporan.tsx`), dilengkapi kotak peringatan ramah dan tombol cepat "Tambah Sekarang" jika pilihan belum terisi.
