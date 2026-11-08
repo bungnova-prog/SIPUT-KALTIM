@@ -6,6 +6,9 @@
 -- 1. Pastikan Ekstensi pgcrypto Aktif
 create extension if not exists pgcrypto;
 
+-- Pastikan search_path mencakup extensions, public, dan auth
+set search_path = public, auth, extensions;
+
 -- 2. Pastikan Tipe Enum 'peran' dan 'tipe_wilayah' Tersedia
 do $$
 begin
@@ -67,7 +70,7 @@ insert into auth.identities (
   updated_at
 )
 select 
-  u.id::text,
+  gen_random_uuid(),
   u.id,
   u.id::text,
   jsonb_build_object('sub', u.id::text, 'email', lower(u.email)),
@@ -326,7 +329,7 @@ begin
     insert into auth.identities (
       id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
     ) values (
-      v_user_id::text,
+      gen_random_uuid(),
       v_user_id,
       jsonb_build_object('sub', v_user_id::text, 'email', lower(trim(p_email))),
       'email',
