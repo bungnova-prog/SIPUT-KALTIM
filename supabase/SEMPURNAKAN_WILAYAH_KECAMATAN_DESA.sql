@@ -397,7 +397,7 @@ begin
     return jsonb_build_object('ok', false, 'pesan', 'Nama desa / kelurahan wajib diisi.');
   end if;
 
-  select * into v_kec from public.wilayah where id = p_kecamatan_id and tipe = 'kecamatan';
+  select * into v_kec from public.wilayah where id = p_kecamatan_id and tipe = 'kecamatan'::public.tipe_wilayah;
   if v_kec.id is null then
     return jsonb_build_object('ok', false, 'pesan', 'Kecamatan induk tidak ditemukan.');
   end if;
@@ -415,7 +415,7 @@ begin
     lng_pusat
   ) values (
     v_kode,
-    'desa',
+    'desa'::public.tipe_wilayah,
     trim(p_nama),
     v_kec.id,
     v_kec.uptd_id,
@@ -455,7 +455,7 @@ begin
     return jsonb_build_object('ok', false, 'pesan', 'Nama kecamatan wajib diisi.');
   end if;
 
-  select * into v_kab from public.wilayah where id = p_kabupaten_id and tipe = 'kabupaten';
+  select * into v_kab from public.wilayah where id = p_kabupaten_id and tipe = 'kabupaten'::public.tipe_wilayah;
   if v_kab.id is null then
     return jsonb_build_object('ok', false, 'pesan', 'Kabupaten induk tidak ditemukan.');
   end if;
@@ -472,7 +472,7 @@ begin
     lng_pusat
   ) values (
     v_kode,
-    'kecamatan',
+    'kecamatan'::public.tipe_wilayah,
     trim(p_nama),
     v_kab.id,
     v_kab.uptd_id,
