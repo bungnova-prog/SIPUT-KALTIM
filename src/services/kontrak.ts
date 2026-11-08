@@ -61,6 +61,16 @@ export interface WilayahRepository {
   daftarDesa(kecamatanId?: string): Promise<Hasil<Wilayah[]>>;
   semuaWilayah(): Promise<Hasil<Wilayah[]>>;
   daftarUptd(): Promise<Hasil<Uptd[]>>;
+  tambahDesa(input: {
+    nama: string;
+    kecamatanId: string;
+    latPusat?: number;
+    lngPusat?: number;
+  }): Promise<Hasil<Wilayah>>;
+  tambahKecamatan(input: {
+    nama: string;
+    kabupatenId: string;
+  }): Promise<Hasil<Wilayah>>;
 }
 
 export interface KomoditasOptRepository {

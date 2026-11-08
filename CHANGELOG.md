@@ -17,6 +17,13 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/) dan
 ## [Belum Dirilis]
 
 ### Ditambahkan
+- Menyediakan master data 105 Kecamatan resmi seluruh 10 Kabupaten/Kota Kalimantan Timur beserta ratusan desa/kelurahan sentra komoditas perkebunan dalam skrip database `supabase/SEMPURNAKAN_WILAYAH_KECAMATAN_DESA.sql`.
+- Menambahkan tombol interaktif `+ Tambah Baru` pada pilihan Kecamatan dan Desa/Kelurahan di Formulir Input Laporan (`src/pages/HalamanInputLaporan.tsx`), dilengkapi modal pendaftaran mandiri dengan validasi form dan notifikasi toast sukses.
+- Menambahkan metode `tambahDesa` dan `tambahKecamatan` pada `WilayahRepository` (`src/services/kontrak.ts`, `src/services/mockRepositories.ts`, dan `src/services/supabaseRepositories.ts`) dengan dukungan pemanggilan RPC `admin_tambah_desa` / `admin_tambah_kecamatan` dan fallback direct insert.
+- Menambahkan fungsi database berkeamanan tinggi (`security definer`) `public.admin_tambah_desa` dan `public.admin_tambah_kecamatan` serta izin kebijakan RLS `wilayah_tambah` dan `wilayah_baca` untuk pengguna terautentikasi.
+
+### Diperbaiki
+- Memperbaiki ketiadaan opsi Kecamatan dan Desa/Kelurahan pada form pelaporan OPT ketika pengguna memilih Kabupaten/Kota tertentu akibat belum terisinya data relasional bertingkat pada basis data Supabase.
 - Menambahkan menu dan modal konfirmasi Hapus Akun Pengguna pada Manajemen Pengguna (`src/pages/HalamanPengguna.tsx`) khusus peran Admin Provinsi dengan perlindungan audit (mencegah penghapusan akun pemilik laporan OPT).
 - Menambahkan komponen `ModalUbahKataSandi` (`src/components/ModalUbahKataSandi.tsx`) untuk penggantian kata sandi mandiri oleh setiap pengguna terautentikasi (petugas/operator/admin), dapat diakses melalui header profil, sidebar, drawer navigasi ponsel, dan baris sesi pengguna.
 - Menambahkan skrip SQL kebijakan penghapusan dan penambahan baris `public.profiles` (`supabase/TAMBAH_KEBIJAKAN_HAPUS_PROFIL.sql` dan pembaruan `SIAP_PAKAI_SETUP_DATABASE.sql`).

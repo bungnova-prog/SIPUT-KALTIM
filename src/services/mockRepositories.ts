@@ -893,6 +893,58 @@ export const wilayahRepository: WilayahRepository = {
   async daftarUptd(): Promise<Hasil<Uptd[]>> {
     return { ok: true, data: dbUptd.map(petakanUptd) };
   },
+  async tambahDesa(input: {
+    nama: string;
+    kecamatanId: string;
+    latPusat?: number;
+    lngPusat?: number;
+  }): Promise<Hasil<Wilayah>> {
+    const namaBersih = input.nama.trim();
+    if (!namaBersih) {
+      return { ok: false, pesan: 'Nama desa / kelurahan wajib diisi.' };
+    }
+    const kecInduk = dbWilayah.find((w) => w.id === input.kecamatanId && w.tipe === 'kecamatan');
+    if (!kecInduk) {
+      return { ok: false, pesan: 'Kecamatan induk tidak ditemukan.' };
+    }
+    const idBaru = `desa-custom-${Date.now()}`;
+    const barisDesaBaru: DbWilayahRow = {
+      id: idBaru,
+      tipe: 'desa',
+      nama: namaBersih,
+      parent_id: input.kecamatanId,
+      uptd_id: kecInduk.uptd_id,
+      lat_pusat: input.latPusat ?? kecInduk.lat_pusat,
+      lng_pusat: input.lngPusat ?? kecInduk.lng_pusat,
+    };
+    dbWilayah.push(barisDesaBaru);
+    return { ok: true, data: petakanWilayah(barisDesaBaru) };
+  },
+  async tambahKecamatan(input: {
+    nama: string;
+    kabupatenId: string;
+  }): Promise<Hasil<Wilayah>> {
+    const namaBersih = input.nama.trim();
+    if (!namaBersih) {
+      return { ok: false, pesan: 'Nama kecamatan wajib diisi.' };
+    }
+    const kabInduk = dbWilayah.find((w) => w.id === input.kabupatenId && w.tipe === 'kabupaten');
+    if (!kabInduk) {
+      return { ok: false, pesan: 'Kabupaten induk tidak ditemukan.' };
+    }
+    const idBaru = `kec-custom-${Date.now()}`;
+    const barisKecBaru: DbWilayahRow = {
+      id: idBaru,
+      tipe: 'kecamatan',
+      nama: namaBersih,
+      parent_id: input.kabupatenId,
+      uptd_id: kabInduk.uptd_id,
+      lat_pusat: kabInduk.lat_pusat,
+      lng_pusat: kabInduk.lng_pusat,
+    };
+    dbWilayah.push(barisKecBaru);
+    return { ok: true, data: petakanWilayah(barisKecBaru) };
+  },
 };
 
 export const komoditasOptRepository: KomoditasOptRepository = {

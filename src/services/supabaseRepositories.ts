@@ -605,6 +605,138 @@ export const wilayahRepository: WilayahRepository = {
       return { ok: false, pesan: terjemahkanGalat(err, 'Gagal memuat daftar UPTD.') };
     }
   },
+
+  async tambahDesa(input: {
+    nama: string;
+    kecamatanId: string;
+    latPusat?: number;
+    lngPusat?: number;
+  }): Promise<Hasil<Wilayah>> {
+    const namaBersih = input.nama.trim();
+    if (!namaBersih) {
+      return { ok: false, pesan: 'Nama desa / kelurahan wajib diisi.' };
+    }
+    try {
+      const klien = ambilKlienSupabase();
+
+      // 1. Coba lewat RPC admin_tambah_desa
+      try {
+        const { data: rawRpcData, error: rpcErr } = await klien.rpc('admin_tambah_desa', {
+          p_nama: namaBersih,
+          p_kecamatan_id: input.kecamatanId,
+          p_lat: input.latPusat ?? null,
+          p_lng: input.lngPusat ?? null,
+        });
+
+        if (!rpcErr && rawRpcData) {
+          const rpcRes = rawRpcData as {
+            ok: boolean;
+            pesan?: string;
+            data?: BarisDbWilayah;
+          };
+          if (rpcRes.ok && rpcRes.data) {
+            const desaBaru = petakanWilayah(rpcRes.data);
+            if (cacheWilayah) {
+              cacheWilayah.push(desaBaru);
+            }
+            return { ok: true, data: desaBaru };
+          }
+        }
+      } catch {
+        // Fallback ke insert langsung jika RPC belum tersedia
+      }
+
+      // 2. Fallback insert langsung ke public.wilayah
+      const kodeUnik = `desa-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const { data: insData, error: insErr } = await klien
+        .from('wilayah')
+        .insert({
+          kode: kodeUnik,
+          tipe: 'desa',
+          nama: namaBersih,
+          parent_id: input.kecamatanId,
+          lat_pusat: input.latPusat ?? null,
+          lng_pusat: input.lngPusat ?? null,
+        })
+        .select('id, tipe, nama, parent_id, uptd_id, lat_pusat, lng_pusat')
+        .single<BarisDbWilayah>();
+
+      if (insErr || !insData) {
+        return { ok: false, pesan: terjemahkanGalat(insErr, 'Gagal menambahkan desa baru.') };
+      }
+
+      const desaBaru = petakanWilayah(insData);
+      if (cacheWilayah) {
+        cacheWilayah.push(desaBaru);
+      }
+      return { ok: true, data: desaBaru };
+    } catch (err) {
+      return { ok: false, pesan: terjemahkanGalat(err, 'Kendala jaringan saat menyimpan desa baru.') };
+    }
+  },
+
+  async tambahKecamatan(input: {
+    nama: string;
+    kabupatenId: string;
+  }): Promise<Hasil<Wilayah>> {
+    const namaBersih = input.nama.trim();
+    if (!namaBersih) {
+      return { ok: false, pesan: 'Nama kecamatan wajib diisi.' };
+    }
+    try {
+      const klien = ambilKlienSupabase();
+
+      // 1. Coba lewat RPC admin_tambah_kecamatan
+      try {
+        const { data: rawRpcData, error: rpcErr } = await klien.rpc('admin_tambah_kecamatan', {
+          p_nama: namaBersih,
+          p_kabupaten_id: input.kabupatenId,
+        });
+
+        if (!rpcErr && rawRpcData) {
+          const rpcRes = rawRpcData as {
+            ok: boolean;
+            pesan?: string;
+            data?: BarisDbWilayah;
+          };
+          if (rpcRes.ok && rpcRes.data) {
+            const kecBaru = petakanWilayah(rpcRes.data);
+            if (cacheWilayah) {
+              cacheWilayah.push(kecBaru);
+            }
+            return { ok: true, data: kecBaru };
+          }
+        }
+      } catch {
+        // Fallback ke insert langsung jika RPC belum tersedia
+      }
+
+      // 2. Fallback insert langsung ke public.wilayah
+      const kodeUnik = `kec-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const { data: insData, error: insErr } = await klien
+        .from('wilayah')
+        .insert({
+          kode: kodeUnik,
+          tipe: 'kecamatan',
+          nama: namaBersih,
+          parent_id: input.kabupatenId,
+        })
+        .select('id, tipe, nama, parent_id, uptd_id, lat_pusat, lng_pusat')
+        .single<BarisDbWilayah>();
+
+      if (insErr || !insData) {
+        return { ok: false, pesan: terjemahkanGalat(insErr, 'Gagal menambahkan kecamatan baru.') };
+      }
+
+      const kecBaru = petakanWilayah(insData);
+      if (cacheWilayah) {
+        cacheWilayah.push(kecBaru);
+      }
+      return { ok: true, data: kecBaru };
+    } catch (err) {
+      return { ok: false, pesan: terjemahkanGalat(err, 'Kendala jaringan saat menyimpan kecamatan baru.') };
+    }
+  },
 };
 
 export const komoditasOptRepository: KomoditasOptRepository = {

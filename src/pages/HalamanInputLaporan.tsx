@@ -15,6 +15,7 @@ import {
   Leaf,
   LocateFixed,
   MapPin,
+  Plus,
   RotateCcw,
   Save,
   Send,
@@ -23,6 +24,7 @@ import {
   TreePalm,
   Trees,
   UserCheck,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -133,6 +135,17 @@ export default function HalamanInputLaporan() {
   const [laporanTerpublikasi, setLaporanTerpublikasi] = useState<Laporan | null>(null);
 
   const sudahInisialisasiRef = useRef(false);
+
+  // Modal pendaftaran wilayah mandiri
+  const [bukaModalTambahKecamatan, setBukaModalTambahKecamatan] = useState(false);
+  const [namaKecamatanBaru, setNamaKecamatanBaru] = useState('');
+  const [sedangSimpanKecamatan, setSedangSimpanKecamatan] = useState(false);
+  const [galatKecamatanBaru, setGalatKecamatanBaru] = useState<string | null>(null);
+
+  const [bukaModalTambahDesa, setBukaModalTambahDesa] = useState(false);
+  const [namaDesaBaru, setNamaDesaBaru] = useState('');
+  const [sedangSimpanDesa, setSedangSimpanDesa] = useState(false);
+  const [galatDesaBaru, setGalatDesaBaru] = useState<string | null>(null);
 
   const periodeSistem = useMemo(() => periodeBawaanSistem(), []);
 
@@ -574,6 +587,89 @@ export default function HalamanInputLaporan() {
     if (desa?.latPusat !== undefined && desa?.lngPusat !== undefined) {
       setValue('lat', desa.latPusat, { shouldValidate: true, shouldDirty: true });
       setValue('lng', desa.lngPusat, { shouldValidate: true, shouldDirty: true });
+    }
+  };
+
+  const tanganiSimpanKecamatanBaru = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const namaBersih = namaKecamatanBaru.trim();
+    if (!namaBersih) {
+      setGalatKecamatanBaru('Nama kecamatan wajib diisi.');
+      return;
+    }
+    if (!nilaiForm.kabupatenId) {
+      setGalatKecamatanBaru('Pilih kabupaten terlebih dahulu.');
+      return;
+    }
+    setSedangSimpanKecamatan(true);
+    setGalatKecamatanBaru(null);
+    try {
+      const res = await wilayahRepository.tambahKecamatan({
+        nama: namaBersih,
+        kabupatenId: nilaiForm.kabupatenId,
+      });
+      if (!res.ok) {
+        setGalatKecamatanBaru(res.pesan);
+        setSedangSimpanKecamatan(false);
+        return;
+      }
+      setSemuaWilayah((prev) => [...prev, res.data]);
+      setValue('kecamatanId', res.data.id, { shouldValidate: true, shouldDirty: true });
+      setValue('desaId', '', { shouldValidate: true, shouldDirty: true });
+      tambahToast({
+        jenis: 'sukses',
+        judul: 'Kecamatan Tersimpan',
+        pesan: `Kecamatan ${namaBersih} berhasil didaftarkan.`,
+      });
+      setBukaModalTambahKecamatan(false);
+      setNamaKecamatanBaru('');
+    } catch (err) {
+      setGalatKecamatanBaru(err instanceof Error ? err.message : 'Gagal menyimpan kecamatan.');
+    } finally {
+      setSedangSimpanKecamatan(false);
+    }
+  };
+
+  const tanganiSimpanDesaBaru = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const namaBersih = namaDesaBaru.trim();
+    if (!namaBersih) {
+      setGalatDesaBaru('Nama desa / kelurahan wajib diisi.');
+      return;
+    }
+    if (!nilaiForm.kecamatanId) {
+      setGalatDesaBaru('Pilih kecamatan terlebih dahulu.');
+      return;
+    }
+    setSedangSimpanDesa(true);
+    setGalatDesaBaru(null);
+    try {
+      const res = await wilayahRepository.tambahDesa({
+        nama: namaBersih,
+        kecamatanId: nilaiForm.kecamatanId,
+      });
+      if (!res.ok) {
+        setGalatDesaBaru(res.pesan);
+        setSedangSimpanDesa(false);
+        return;
+      }
+      setSemuaWilayah((prev) => [...prev, res.data]);
+      setValue('desaId', res.data.id, { shouldValidate: true, shouldDirty: true });
+      if (res.data.latPusat !== undefined && res.data.lngPusat !== undefined) {
+        setValue('lat', res.data.latPusat, { shouldValidate: true, shouldDirty: true });
+        setValue('lng', res.data.lngPusat, { shouldValidate: true, shouldDirty: true });
+      }
+      tambahToast({
+        jenis: 'sukses',
+        judul: 'Desa Tersimpan',
+        pesan: `Desa/Kelurahan ${namaBersih} berhasil didaftarkan.`,
+      });
+      setBukaModalTambahDesa(false);
+      setNamaDesaBaru('');
+    } catch (err) {
+      setGalatDesaBaru(err instanceof Error ? err.message : 'Gagal menyimpan desa.');
+    } finally {
+      setSedangSimpanDesa(false);
     }
   };
 
@@ -1242,12 +1338,26 @@ export default function HalamanInputLaporan() {
 
                 {/* Kecamatan */}
                 <div>
-                  <label
-                    htmlFor="input-kecamatan"
-                    className="block text-xs font-bold uppercase tracking-wider text-ink-900"
-                  >
-                    Kecamatan <span className="text-danger-600">*</span>
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="input-kecamatan"
+                      className="block text-xs font-bold uppercase tracking-wider text-ink-900"
+                    >
+                      Kecamatan <span className="text-danger-600">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGalatKecamatanBaru(null);
+                        setNamaKecamatanBaru('');
+                        setBukaModalTambahKecamatan(true);
+                      }}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-700 hover:text-brand-800 hover:underline"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Tambah Baru
+                    </button>
+                  </div>
                   <select
                     id="input-kecamatan"
                     value={nilaiForm.kecamatanId}
@@ -1272,12 +1382,26 @@ export default function HalamanInputLaporan() {
 
                 {/* Desa / Kelurahan */}
                 <div>
-                  <label
-                    htmlFor="input-desa"
-                    className="block text-xs font-bold uppercase tracking-wider text-ink-900"
-                  >
-                    Desa / Kelurahan <span className="text-danger-600">*</span>
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="input-desa"
+                      className="block text-xs font-bold uppercase tracking-wider text-ink-900"
+                    >
+                      Desa / Kelurahan <span className="text-danger-600">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGalatDesaBaru(null);
+                        setNamaDesaBaru('');
+                        setBukaModalTambahDesa(true);
+                      }}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-700 hover:text-brand-800 hover:underline"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Tambah Baru
+                    </button>
+                  </div>
                   <select
                     id="input-desa"
                     value={nilaiForm.desaId}
@@ -1851,6 +1975,156 @@ export default function HalamanInputLaporan() {
           </div>
         </div>
       </form>
+
+      {/* MODAL TAMBAH KECAMATAN */}
+      {bukaModalTambahKecamatan && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="judul-modal-kecamatan"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/60 p-4 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-xl">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 id="judul-modal-kecamatan" className="text-base font-bold text-ink-900">
+                Tambah Kecamatan Baru
+              </h3>
+              <button
+                type="button"
+                onClick={() => setBukaModalTambahKecamatan(false)}
+                className="rounded-lg p-1 text-ink-600 hover:bg-canvas hover:text-ink-900"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => void tanganiSimpanKecamatanBaru(e)} className="mt-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-ink-600">Kabupaten / Kota</label>
+                <p className="mt-1 font-semibold text-ink-900">
+                  {kabupatenTerpilih?.nama ?? 'Belum dipilih'}
+                </p>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="input-nama-kecamatan-baru"
+                  className="block text-xs font-bold uppercase tracking-wider text-ink-900"
+                >
+                  Nama Kecamatan <span className="text-danger-600">*</span>
+                </label>
+                <input
+                  id="input-nama-kecamatan-baru"
+                  type="text"
+                  required
+                  placeholder="Contoh: Sangatta Utara"
+                  value={namaKecamatanBaru}
+                  onChange={(e) => setNamaKecamatanBaru(e.target.value)}
+                  className="mt-1.5 min-h-[44px] w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink-900 focus:border-brand-700"
+                />
+              </div>
+
+              {galatKecamatanBaru && (
+                <p className="text-xs font-semibold text-danger-600">{galatKecamatanBaru}</p>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setBukaModalTambahKecamatan(false)}
+                  disabled={sedangSimpanKecamatan}
+                  className="min-h-[40px] rounded-xl border border-line px-4 py-2 text-xs font-bold text-ink-700 hover:bg-canvas"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={sedangSimpanKecamatan || !namaKecamatanBaru.trim()}
+                  className="min-h-[40px] rounded-xl bg-brand-900 px-5 py-2 text-xs font-bold text-surface hover:bg-brand-700 disabled:opacity-50"
+                >
+                  {sedangSimpanKecamatan ? 'Menyimpan...' : 'Simpan Kecamatan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL TAMBAH DESA */}
+      {bukaModalTambahDesa && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="judul-modal-desa"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/60 p-4 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-xl">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 id="judul-modal-desa" className="text-base font-bold text-ink-900">
+                Tambah Desa / Kelurahan Baru
+              </h3>
+              <button
+                type="button"
+                onClick={() => setBukaModalTambahDesa(false)}
+                className="rounded-lg p-1 text-ink-600 hover:bg-canvas hover:text-ink-900"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => void tanganiSimpanDesaBaru(e)} className="mt-4 space-y-4">
+              <div className="space-y-1 text-xs">
+                <p className="text-ink-600">
+                  Kabupaten: <strong className="text-ink-900">{kabupatenTerpilih?.nama ?? '-'}</strong>
+                </p>
+                <p className="text-ink-600">
+                  Kecamatan: <strong className="text-ink-900">{kecamatanTerpilih?.nama ?? '-'}</strong>
+                </p>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="input-nama-desa-baru"
+                  className="block text-xs font-bold uppercase tracking-wider text-ink-900"
+                >
+                  Nama Desa / Kelurahan <span className="text-danger-600">*</span>
+                </label>
+                <input
+                  id="input-nama-desa-baru"
+                  type="text"
+                  required
+                  placeholder="Contoh: Desa Makmur Sejahtera"
+                  value={namaDesaBaru}
+                  onChange={(e) => setNamaDesaBaru(e.target.value)}
+                  className="mt-1.5 min-h-[44px] w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink-900 focus:border-brand-700"
+                />
+              </div>
+
+              {galatDesaBaru && (
+                <p className="text-xs font-semibold text-danger-600">{galatDesaBaru}</p>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setBukaModalTambahDesa(false)}
+                  disabled={sedangSimpanDesa}
+                  className="min-h-[40px] rounded-xl border border-line px-4 py-2 text-xs font-bold text-ink-700 hover:bg-canvas"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={sedangSimpanDesa || !namaDesaBaru.trim()}
+                  className="min-h-[40px] rounded-xl bg-brand-900 px-5 py-2 text-xs font-bold text-surface hover:bg-brand-700 disabled:opacity-50"
+                >
+                  {sedangSimpanDesa ? 'Menyimpan...' : 'Simpan Desa'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
