@@ -13,6 +13,7 @@ import {
 import { useAppStore } from '../lib/storeAplikasi';
 import { authService } from '../services';
 import logoKaltim from '../assets/logo-kaltim.png';
+import ilustrasiPopt from '../assets/ilustrasi-popt.png';
 
 export default function HalamanMasuk() {
   const navigate = useNavigate();
@@ -110,7 +111,25 @@ export default function HalamanMasuk() {
               </p>
             </div>
 
-            <div className="mt-8 space-y-2.5 rounded-xl border border-brand-700 bg-brand-700/40 p-4 text-xs">
+            {/* Ilustrasi Petugas POPT Lapangan */}
+            <div className="my-6 flex flex-col items-center justify-center text-center">
+              <div className="relative flex items-center justify-center">
+                <div
+                  className="absolute -inset-3 rounded-full bg-gold-500/15 blur-xl"
+                  aria-hidden
+                />
+                <img
+                  src={ilustrasiPopt}
+                  alt="Ilustrasi Petugas POPT Pengendali Organisme Pengganggu Tumbuhan"
+                  className="relative h-44 w-auto object-contain drop-shadow-xl transition-transform duration-300 hover:scale-105 sm:h-52"
+                />
+              </div>
+              <p className="mt-3 text-[11px] font-semibold tracking-wide text-brand-100">
+                Petugas POPT Pengendali Organisme Pengganggu Tumbuhan
+              </p>
+            </div>
+
+            <div className="mt-4 space-y-2.5 rounded-xl border border-brand-700 bg-brand-700/40 p-4 text-xs">
               <p className="flex items-center gap-2 font-bold text-surface">
                 <ShieldCheck className="h-4 w-4 shrink-0 text-gold-500" aria-hidden />
                 <span>Otorisasi Berbasis Row Level Security (RLS)</span>
