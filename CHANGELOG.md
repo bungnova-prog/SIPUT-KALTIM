@@ -17,6 +17,16 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/) dan
 ## [Belum Dirilis]
 
 ### Ditambahkan
+- Menambahkan katalog master resmi 40 OPT perkebunan Kalimantan Timur (`src/data/masterKomoditasOptKaltim.ts`) yang mencakup 8 komoditas perkebunan (Kelapa Sawit, Lada, Kakao, Karet, Aren, Kelapa Dalam, Kopi, Pala) lengkap dengan nama lokal, nama ilmiah, kategori hama/penyakit, deskripsi gejala lapangan, dan rekomendasi teknis POPT dinas perkebunan.
+- Menambahkan komoditas Pala (`kom-pala`) pada tipe domain (`src/types/domain.ts`), data simulasi, pemetaan ikon Lucide (`Sparkles`), dan skrip penyiapan database (`supabase/SIAP_PAKAI_SETUP_DATABASE.sql`).
+- Menambahkan auto-provisioning komoditas dan OPT ke basis data Supabase (`pastikanKomoditasDanOptTersediaDiSupabase` dan `sinkronkanMasterKomoditasOptKeSupabase` pada `src/services/supabaseRepositories.ts`) sehingga simpan atau publikasi laporan selalu lolos integritas relasional (*foreign key constraint*).
+
+### Diperbaiki
+- Mengatasi kendala isian jenis hama/penyakit (OPT) yang kosong atau tidak muncul saat memilih komoditas Aren, Lada, Kakao, Kelapa Sawit, Kelapa Dalam, Kopi, dan Pala pada formulir laporan (`src/pages/HalamanInputLaporan.tsx`), melalui filter pencocokan ID/kode/nama komoditas secara tangguh serta pemilihan otomatis OPT pertama saat ubin komoditas diklik.
+- Menyesuaikan tata letak ubin komoditas perkebunan (`grid-cols-2 sm:grid-cols-4 lg:grid-cols-8`) pada Formulir Input Laporan dan Halaman Komoditas & OPT agar menampung 8 komoditas perkebunan Kaltim secara simetris dan responsif.
+- Memperbarui skrip basis data `supabase/SIAP_PAKAI_SETUP_DATABASE.sql` dengan 8 komoditas dan 40 benih baris OPT master resmi.
+
+### Ditambahkan
 - Menambahkan berkas master data wilayah resmi Kalimantan Timur (`src/data/masterWilayahKaltim.ts`) yang memuat seluruh 10 Kabupaten/Kota, 105 Kecamatan, dan 1.012+ Kampung, Desa, dan Kelurahan resmi Kemendagri & BPS, langsung terintegrasi ke bundel frontend TypeScript.
 - Menambahkan fungsi pengayaan wilayah hibrida (`perkayaWilayahDenganMaster` pada `src/services/supabaseRepositories.ts` dan `inisialisasiDbWilayahLengkap` pada `src/services/mockRepositories.ts`) yang memastikan seluruh kecamatan di 10 Kabupaten/Kota memiliki opsi Kampung/Desa/Kelurahan lengkap di UI tanpa bergantung pada riwayat eksekusi migrasi basis data.
 - Menambahkan mekanisme penjaminan baris relasional otomatis (`pastikanDesaTersediaDiSupabase`) pada repositori laporan Supabase yang mendaftarkan entri desa master ke tabel `public.wilayah` sebelum menyimpan laporan, guna mencegah galat integritas relasional *foreign key*.

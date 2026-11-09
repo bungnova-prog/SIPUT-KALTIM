@@ -522,12 +522,19 @@ function validasiInputLaporan(input: LaporanInput, peminta?: ProfilPengguna): st
   const cekKoord = validasiKoordinatKaltim(input.lat, input.lng);
   if (!cekKoord.valid) return cekKoord.pesan ?? 'Koordinat di luar Kalimantan Timur.';
 
-  const kom = dbKomoditas.find((k) => k.id === input.komoditasId);
+  const kom = dbKomoditas.find(
+    (k) =>
+      k.id === input.komoditasId ||
+      k.kode_ikon === input.komoditasId ||
+      `kom-${k.kode_ikon}` === input.komoditasId ||
+      k.nama.toLowerCase() === input.komoditasId.toLowerCase()
+  );
   if (!kom) return 'Komoditas perkebunan wajib dipilih.';
 
   const opt = dbOpt.find((o) => o.id === input.optId);
   if (!opt) return 'Jenis Hama/OPT wajib dipilih.';
-  if (opt.komoditas_id !== input.komoditasId) {
+  const idCocokOpt = new Set([kom.id, kom.kode_ikon, `kom-${kom.kode_ikon}`]);
+  if (!idCocokOpt.has(opt.komoditas_id)) {
     return 'Jenis OPT yang dipilih tidak sesuai dengan komoditas.';
   }
 
@@ -1033,10 +1040,24 @@ export const komoditasOptRepository: KomoditasOptRepository = {
     return { ok: true, data: dbKomoditas.map(petakanKomoditas) };
   },
   async daftarOpt(komoditasId?: string): Promise<Hasil<Opt[]>> {
+    if (!komoditasId) {
+      return {
+        ok: true,
+        data: dbOpt.map(petakanOpt),
+      };
+    }
+    const kom = dbKomoditas.find(
+      (k) =>
+        k.id === komoditasId ||
+        k.kode_ikon === komoditasId ||
+        `kom-${k.kode_ikon}` === komoditasId ||
+        k.nama.toLowerCase() === komoditasId.toLowerCase()
+    );
+    const idCocok = new Set([komoditasId, kom?.id, kom?.kode_ikon, kom ? `kom-${kom.kode_ikon}` : ''].filter(Boolean));
     return {
       ok: true,
       data: dbOpt
-        .filter((o) => !komoditasId || o.komoditas_id === komoditasId)
+        .filter((o) => idCocok.has(o.komoditas_id))
         .map(petakanOpt),
     };
   },

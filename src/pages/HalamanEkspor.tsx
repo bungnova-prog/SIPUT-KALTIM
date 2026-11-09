@@ -352,7 +352,7 @@ export default function HalamanEkspor() {
               onChange={(e) => setKomoditasId(e.target.value)}
               className="mt-1.5 min-h-[44px] w-full rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink-900"
             >
-              <option value="">Semua 7 Komoditas Baku</option>
+              <option value="">Semua Komoditas Baku</option>
               {daftarKomoditas.map((kom) => (
                 <option key={kom.id} value={kom.id}>
                   {kom.nama}

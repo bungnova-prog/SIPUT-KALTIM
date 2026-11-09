@@ -74,7 +74,8 @@ export interface Komoditas {
     | 'karet'
     | 'aren'
     | 'kelapa_dalam'
-    | 'kopi';
+    | 'kopi'
+    | 'pala';
 }
 
 export interface Opt {

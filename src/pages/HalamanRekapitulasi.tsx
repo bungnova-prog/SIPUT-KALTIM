@@ -254,7 +254,7 @@ export default function HalamanRekapitulasi() {
     const namaKom = filterAktif.komoditasIds?.[0]
       ? daftarKomoditas.find((k) => k.id === filterAktif.komoditasIds?.[0])?.nama ??
         'Komoditas Terpilih'
-      : 'Semua 7 Komoditas Baku';
+      : 'Semua Komoditas Baku';
 
     const namaUptd = filterAktif.uptdId
       ? daftarUptd.find((u) => u.id === filterAktif.uptdId)?.nama ?? 'UPTD Terpilih'
@@ -590,7 +590,7 @@ export default function HalamanRekapitulasi() {
               onChange={(e) => setDraf((s) => ({ ...s, komoditasId: e.target.value }))}
               className="mt-1.5 min-h-[44px] w-full rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink-900 focus:border-brand-700"
             >
-              <option value="">Semua 7 Komoditas Baku</option>
+              <option value="">Semua Komoditas Baku</option>
               {daftarKomoditas.map((kom) => (
                 <option key={kom.id} value={kom.id}>
                   {kom.nama}

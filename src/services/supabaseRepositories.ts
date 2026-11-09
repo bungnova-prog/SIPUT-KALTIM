@@ -5,6 +5,12 @@ import {
   ambilMasterDesaPerKecamatan,
   normalisasiNamaWilayah,
 } from '../data/masterWilayahKaltim';
+import {
+  MASTER_KOMODITAS,
+  MASTER_OPT,
+  cariKomoditasMaster,
+  normalisasiNamaKomoditas,
+} from '../data/masterKomoditasOptKaltim';
 import { transisiStatusLaporan } from '../lib/alurLaporan';
 import {
   hitungIntensitasKomoditasDariLaporan,
@@ -880,7 +886,7 @@ export const wilayahRepository: WilayahRepository = {
 
 export const komoditasOptRepository: KomoditasOptRepository = {
   async daftarKomoditas(): Promise<Hasil<Komoditas[]>> {
-    if (cacheKomoditas) {
+    if (cacheKomoditas && cacheKomoditas.length >= MASTER_KOMODITAS.length) {
       return { ok: true, data: cacheKomoditas };
     }
     try {
@@ -893,18 +899,49 @@ export const komoditasOptRepository: KomoditasOptRepository = {
         .returns<BarisDbKomoditas[]>();
 
       if (error) {
-        return { ok: false, pesan: terjemahkanGalat(error, 'Gagal memuat daftar komoditas.') };
+        cacheKomoditas = MASTER_KOMODITAS.map((m) => ({
+          id: m.id,
+          nama: m.nama,
+          aktif: m.aktif,
+          kodeIkon: m.kodeIkon,
+        }));
+        return { ok: true, data: cacheKomoditas };
       }
 
-      cacheKomoditas = (data ?? []).map((k) => ({
+      const hasil: Komoditas[] = (data ?? []).map((k) => ({
         id: k.id,
         nama: k.nama,
         aktif: k.aktif,
-        kodeIkon: k.kode_ikon,
+        kodeIkon: k.kode_ikon || (cariKomoditasMaster(k.nama)?.kodeIkon ?? 'sawit'),
+      }));
+
+      // Lengkapi dengan master jika ada komoditas baku yang belum ada di database (mis. Pala)
+      for (const m of MASTER_KOMODITAS) {
+        const sudahAda = hasil.some(
+          (k) =>
+            normalisasiNamaKomoditas(k.nama) === normalisasiNamaKomoditas(m.nama) ||
+            k.kodeIkon === m.kodeIkon
+        );
+        if (!sudahAda) {
+          hasil.push({
+            id: m.id,
+            nama: m.nama,
+            aktif: m.aktif,
+            kodeIkon: m.kodeIkon,
+          });
+        }
+      }
+
+      cacheKomoditas = hasil;
+      return { ok: true, data: cacheKomoditas };
+    } catch {
+      cacheKomoditas = MASTER_KOMODITAS.map((m) => ({
+        id: m.id,
+        nama: m.nama,
+        aktif: m.aktif,
+        kodeIkon: m.kodeIkon,
       }));
       return { ok: true, data: cacheKomoditas };
-    } catch (err) {
-      return { ok: false, pesan: terjemahkanGalat(err, 'Gagal memuat daftar komoditas.') };
     }
   },
 
@@ -923,29 +960,106 @@ export const komoditasOptRepository: KomoditasOptRepository = {
           .order('nama_lokal', { ascending: true })
           .returns<BarisDbOpt[]>();
 
-        if (error) {
-          return { ok: false, pesan: terjemahkanGalat(error, 'Gagal memuat katalog OPT.') };
+        const optDariDb = error ? [] : (data ?? []);
+        const petaKomById = new Map(komHasil.data.map((k) => [k.id, k]));
+        const petaKomByNorm = new Map(komHasil.data.map((k) => [normalisasiNamaKomoditas(k.nama), k]));
+
+        const hasilOpt: Opt[] = optDariDb.map((o) => {
+          const kom = petaKomById.get(o.komoditas_id);
+          return {
+            id: o.id,
+            komoditasId: o.komoditas_id,
+            namaKomoditas: kom ? kom.nama : '-',
+            namaLokal: o.nama_lokal,
+            namaIlmiah: o.nama_ilmiah,
+            jenis: o.jenis,
+            gejala: o.gejala,
+            rekomendasi: o.rekomendasi,
+          };
+        });
+
+        // Lengkapi dengan katalog resmi 40 MASTER_OPT Kaltim
+        for (const m of MASTER_OPT) {
+          const komTerkait =
+            petaKomById.get(m.komoditasKode) ||
+            petaKomByNorm.get(normalisasiNamaKomoditas(m.namaKomoditas)) ||
+            komHasil.data.find((k) => k.kodeIkon === m.komoditasKode.replace('kom-', ''));
+
+          const komIdAktif = komTerkait ? komTerkait.id : m.komoditasKode;
+          const namaKomAktif = komTerkait ? komTerkait.nama : m.namaKomoditas;
+
+          const sudahAda = hasilOpt.some(
+            (o) =>
+              (o.komoditasId === komIdAktif ||
+                normalisasiNamaKomoditas(o.namaKomoditas) === normalisasiNamaKomoditas(namaKomAktif)) &&
+              (normalisasiNamaKomoditas(o.namaLokal) === normalisasiNamaKomoditas(m.namaLokal) ||
+                normalisasiNamaKomoditas(o.namaIlmiah) === normalisasiNamaKomoditas(m.namaIlmiah))
+          );
+
+          if (!sudahAda) {
+            hasilOpt.push({
+              id: m.id,
+              komoditasId: komIdAktif,
+              namaKomoditas: namaKomAktif,
+              namaLokal: m.namaLokal,
+              namaIlmiah: m.namaIlmiah,
+              jenis: m.jenis,
+              gejala: m.gejala,
+              rekomendasi: m.rekomendasi,
+            });
+          }
         }
 
-        const petaKom = new Map(komHasil.data.map((k) => [k.id, k.nama]));
-        cacheOpt = (data ?? []).map((o) => ({
-          id: o.id,
-          komoditasId: o.komoditas_id,
-          namaKomoditas: petaKom.get(o.komoditas_id) ?? '-',
-          namaLokal: o.nama_lokal,
-          namaIlmiah: o.nama_ilmiah,
-          jenis: o.jenis,
-          gejala: o.gejala,
-          rekomendasi: o.rekomendasi,
+        cacheOpt = hasilOpt;
+      } catch {
+        const komHasil = await komoditasOptRepository.daftarKomoditas();
+        const petaKom = new Map(
+          (komHasil.ok ? komHasil.data : []).map((k) => [normalisasiNamaKomoditas(k.nama), k.id])
+        );
+        cacheOpt = MASTER_OPT.map((m) => ({
+          id: m.id,
+          komoditasId: petaKom.get(normalisasiNamaKomoditas(m.namaKomoditas)) ?? m.komoditasKode,
+          namaKomoditas: m.namaKomoditas,
+          namaLokal: m.namaLokal,
+          namaIlmiah: m.namaIlmiah,
+          jenis: m.jenis,
+          gejala: m.gejala,
+          rekomendasi: m.rekomendasi,
         }));
-      } catch (err) {
-        return { ok: false, pesan: terjemahkanGalat(err, 'Gagal memuat katalog OPT.') };
       }
     }
 
-    const daftar = komoditasId
-      ? cacheOpt.filter((o) => o.komoditasId === komoditasId)
-      : cacheOpt;
+    if (!komoditasId) {
+      return { ok: true, data: cacheOpt };
+    }
+
+    const komHasil = await komoditasOptRepository.daftarKomoditas();
+    const komTerpilih = komHasil.ok
+      ? komHasil.data.find(
+          (k) =>
+            k.id === komoditasId ||
+            k.kodeIkon === komoditasId ||
+            normalisasiNamaKomoditas(k.nama) === normalisasiNamaKomoditas(komoditasId)
+        )
+      : undefined;
+    const namaKomNorm = komTerpilih
+      ? normalisasiNamaKomoditas(komTerpilih.nama)
+      : normalisasiNamaKomoditas(komoditasId);
+    const idSet = new Set(
+      [
+        komoditasId,
+        komTerpilih?.id,
+        komTerpilih?.kodeIkon,
+        komTerpilih ? `kom-${komTerpilih.kodeIkon}` : '',
+      ].filter(Boolean)
+    );
+
+    const daftar = cacheOpt.filter((o) => {
+      if (idSet.has(o.komoditasId)) return true;
+      if (namaKomNorm && normalisasiNamaKomoditas(o.namaKomoditas) === namaKomNorm) return true;
+      return false;
+    });
+
     return { ok: true, data: daftar };
   },
 
@@ -1497,7 +1611,11 @@ async function validasiInputLaporanKlien(input: LaporanInput): Promise<string | 
   }
 
   if (optHasil.ok) {
-    const opt = optHasil.data.find((o) => o.id === input.optId);
+    const opt = optHasil.data.find(
+      (o) =>
+        o.id === input.optId ||
+        normalisasiNamaKomoditas(o.namaLokal) === normalisasiNamaKomoditas(input.optId)
+    );
     if (!opt) return 'Jenis OPT tidak sesuai dengan komoditas yang dipilih.';
   }
 
@@ -1589,6 +1707,108 @@ async function pastikanDesaTersediaDiSupabase(desaId: string): Promise<string> {
   return desaId;
 }
 
+async function pastikanKomoditasDanOptTersediaDiSupabase(
+  komoditasId: string,
+  optId: string
+): Promise<{ komoditasId: string; optId: string }> {
+  const klien = ambilKlienSupabase();
+  let finalKomoditasId = komoditasId;
+  let finalOptId = optId;
+
+  // 1. Cek & pastikan Komoditas ada di tabel Supabase
+  const isKomUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(komoditasId);
+  if (isKomUuid) {
+    const { data: adaKom } = await klien
+      .from('komoditas')
+      .select('id, nama')
+      .eq('id', komoditasId)
+      .maybeSingle<{ id: string; nama: string }>();
+    if (adaKom?.id) {
+      finalKomoditasId = adaKom.id;
+    }
+  }
+
+  // Jika bukan UUID atau tidak ditemukan di tabel komoditas
+  if (finalKomoditasId === komoditasId && !isKomUuid) {
+    const masterKom = cariKomoditasMaster(komoditasId);
+    const namaCari = masterKom ? masterKom.nama : komoditasId;
+    const { data: komByNama } = await klien
+      .from('komoditas')
+      .select('id, nama')
+      .ilike('nama', namaCari)
+      .maybeSingle<{ id: string; nama: string }>();
+
+    if (komByNama?.id) {
+      finalKomoditasId = komByNama.id;
+    } else if (masterKom) {
+      const { data: komBaru } = await klien
+        .from('komoditas')
+        .insert({
+          nama: masterKom.nama,
+          kode_ikon: masterKom.kodeIkon,
+          aktif: true,
+        })
+        .select('id')
+        .single<{ id: string }>();
+      if (komBaru?.id) {
+        finalKomoditasId = komBaru.id;
+      }
+    }
+  }
+
+  // 2. Cek & pastikan OPT ada di tabel Supabase
+  const isOptUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(optId);
+  if (isOptUuid) {
+    const { data: adaOpt } = await klien
+      .from('opt')
+      .select('id')
+      .eq('id', optId)
+      .maybeSingle<{ id: string }>();
+    if (adaOpt?.id) {
+      finalOptId = adaOpt.id;
+      return { komoditasId: finalKomoditasId, optId: finalOptId };
+    }
+  }
+
+  // Cari di MASTER_OPT
+  const masterOpt = MASTER_OPT.find(
+    (o) =>
+      o.id === optId ||
+      normalisasiNamaKomoditas(o.namaLokal) === normalisasiNamaKomoditas(optId)
+  );
+
+  if (masterOpt) {
+    const { data: optDiDb } = await klien
+      .from('opt')
+      .select('id')
+      .eq('komoditas_id', finalKomoditasId)
+      .ilike('nama_lokal', masterOpt.namaLokal)
+      .maybeSingle<{ id: string }>();
+
+    if (optDiDb?.id) {
+      finalOptId = optDiDb.id;
+    } else {
+      const { data: optBaru } = await klien
+        .from('opt')
+        .insert({
+          komoditas_id: finalKomoditasId,
+          nama_lokal: masterOpt.namaLokal,
+          nama_ilmiah: masterOpt.namaIlmiah,
+          jenis: masterOpt.jenis,
+          gejala: masterOpt.gejala,
+          rekomendasi: masterOpt.rekomendasi,
+        })
+        .select('id')
+        .single<{ id: string }>();
+      if (optBaru?.id) {
+        finalOptId = optBaru.id;
+      }
+    }
+  }
+
+  return { komoditasId: finalKomoditasId, optId: finalOptId };
+}
+
 async function simpanAtauPublikasikanLaporan(
   input: LaporanInput,
   peminta: ProfilPengguna,
@@ -1598,7 +1818,10 @@ async function simpanAtauPublikasikanLaporan(
   if (galatValidasi) return { ok: false, pesan: galatValidasi };
 
   try {
-    const idDesaValid = await pastikanDesaTersediaDiSupabase(input.desaId);
+    const [idDesaValid, komOptValid] = await Promise.all([
+      pastikanDesaTersediaDiSupabase(input.desaId),
+      pastikanKomoditasDanOptTersediaDiSupabase(input.komoditasId, input.optId),
+    ]);
     const klien = ambilKlienSupabase();
     let idTarget = input.id;
 
@@ -1629,8 +1852,8 @@ async function simpanAtauPublikasikanLaporan(
           nama_blok: input.namaBlok.trim(),
           lat: input.lat,
           lng: input.lng,
-          komoditas_id: input.komoditasId,
-          opt_id: input.optId,
+          komoditas_id: komOptValid.komoditasId,
+          opt_id: komOptValid.optId,
           fase_tanaman: input.faseTanaman,
           tahun: input.tahun,
           triwulan: input.triwulan,
@@ -1662,8 +1885,8 @@ async function simpanAtauPublikasikanLaporan(
           nama_blok: input.namaBlok.trim(),
           lat: input.lat,
           lng: input.lng,
-          komoditas_id: input.komoditasId,
-          opt_id: input.optId,
+          komoditas_id: komOptValid.komoditasId,
+          opt_id: komOptValid.optId,
           fase_tanaman: input.faseTanaman,
           tahun: input.tahun,
           triwulan: input.triwulan,
@@ -1773,7 +1996,10 @@ export const laporanRepository: LaporanRepository = {
     if (galatValidasi) return { ok: false, pesan: galatValidasi };
 
     try {
-      const idDesaValid = await pastikanDesaTersediaDiSupabase(input.desaId);
+      const [idDesaValid, komOptValid] = await Promise.all([
+        pastikanDesaTersediaDiSupabase(input.desaId),
+        pastikanKomoditasDanOptTersediaDiSupabase(input.komoditasId, input.optId),
+      ]);
       const klien = ambilKlienSupabase();
       const { error } = await klien
         .from('laporan')
@@ -1782,8 +2008,8 @@ export const laporanRepository: LaporanRepository = {
           nama_blok: input.namaBlok.trim(),
           lat: input.lat,
           lng: input.lng,
-          komoditas_id: input.komoditasId,
-          opt_id: input.optId,
+          komoditas_id: komOptValid.komoditasId,
+          opt_id: komOptValid.optId,
           fase_tanaman: input.faseTanaman,
           tahun: input.tahun,
           triwulan: input.triwulan,
@@ -2829,6 +3055,99 @@ export async function sinkronkanMasterWilayahKeSupabase(
     return {
       ok: false,
       pesan: terjemahkanGalat(err, 'Terjadi kesalahan saat menyinkronkan master wilayah.'),
+    };
+  }
+}
+
+/**
+ * Menyinkronkan seluruh 8 komoditas dan 40 OPT master resmi Kaltim ke basis data Supabase.
+ */
+export async function sinkronkanMasterKomoditasOptKeSupabase(
+  onProgress?: (selesai: number, total: number, pesan: string) => void
+): Promise<Hasil<{ totalKomoditas: number; totalOpt: number }>> {
+  try {
+    const klien = ambilKlienSupabase();
+    onProgress?.(0, MASTER_KOMODITAS.length + MASTER_OPT.length, 'Menghubungkan ke Supabase...');
+
+    // 1. Sisipkan / pastikan 8 komoditas
+    const { data: komDb } = await klien
+      .from('komoditas')
+      .select('id, nama, kode_ikon')
+      .returns<BarisDbKomoditas[]>();
+
+    const mapKomoditasId = new Map<string, string>();
+    (komDb ?? []).forEach((k) => {
+      mapKomoditasId.set(normalisasiNamaKomoditas(k.nama), k.id);
+      if (k.kode_ikon) mapKomoditasId.set(k.kode_ikon, k.id);
+    });
+
+    let komBaruCount = 0;
+    for (const mk of MASTER_KOMODITAS) {
+      const norm = normalisasiNamaKomoditas(mk.nama);
+      if (!mapKomoditasId.has(norm)) {
+        const { data: insKom } = await klien
+          .from('komoditas')
+          .insert({
+            nama: mk.nama,
+            kode_ikon: mk.kodeIkon,
+            aktif: true,
+          })
+          .select('id')
+          .single<{ id: string }>();
+        if (insKom?.id) {
+          mapKomoditasId.set(norm, insKom.id);
+          mapKomoditasId.set(mk.kodeIkon, insKom.id);
+          komBaruCount++;
+        }
+      }
+    }
+
+    // 2. Ambil OPT yang sudah ada di Supabase
+    const { data: optDb } = await klien
+      .from('opt')
+      .select('id, komoditas_id, nama_lokal')
+      .returns<BarisDbOpt[]>();
+
+    const setOptEksis = new Set<string>();
+    (optDb ?? []).forEach((o) => {
+      setOptEksis.add(`${o.komoditas_id}:${normalisasiNamaKomoditas(o.nama_lokal)}`);
+    });
+
+    let optBaruCount = 0;
+    for (const mo of MASTER_OPT) {
+      const komUuid =
+        mapKomoditasId.get(normalisasiNamaKomoditas(mo.namaKomoditas)) ||
+        mapKomoditasId.get(mo.komoditasKode.replace('kom-', ''));
+      if (!komUuid) continue;
+
+      const keyUnik = `${komUuid}:${normalisasiNamaKomoditas(mo.namaLokal)}`;
+      if (setOptEksis.has(keyUnik)) continue;
+
+      const { data: insOpt } = await klien
+        .from('opt')
+        .insert({
+          komoditas_id: komUuid,
+          nama_lokal: mo.namaLokal,
+          nama_ilmiah: mo.namaIlmiah,
+          jenis: mo.jenis,
+          gejala: mo.gejala,
+          rekomendasi: mo.rekomendasi,
+        })
+        .select('id')
+        .single<{ id: string }>();
+
+      if (insOpt?.id) {
+        setOptEksis.add(keyUnik);
+        optBaruCount++;
+      }
+    }
+
+    bersihkanCacheSesiSupabase();
+    return { ok: true, data: { totalKomoditas: komBaruCount, totalOpt: optBaruCount } };
+  } catch (err) {
+    return {
+      ok: false,
+      pesan: terjemahkanGalat(err, 'Gagal menyinkronkan katalog master komoditas dan OPT.'),
     };
   }
 }

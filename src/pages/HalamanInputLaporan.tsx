@@ -20,6 +20,7 @@ import {
   Save,
   Send,
   ShieldCheck,
+  Sparkles,
   Sprout,
   TreePalm,
   Trees,
@@ -60,6 +61,7 @@ import {
   skemaFormLaporan,
   type NilaiFormLaporan,
 } from '../lib/skemaFormLaporan';
+import { normalisasiNamaKomoditas } from '../data/masterKomoditasOptKaltim';
 import { useAppStore } from '../lib/storeAplikasi';
 import {
   hapusDrafLokalForm,
@@ -88,6 +90,7 @@ const IKON_KOMODITAS: Record<Komoditas['kodeIkon'], LucideIcon> = {
   aren: TreePalm,
   kelapa_dalam: Leaf,
   kopi: Coffee,
+  pala: Sparkles,
 };
 
 const OPSI_TRIWULAN: readonly { nilai: 1 | 2 | 3 | 4; label: string }[] = [
@@ -218,8 +221,16 @@ export default function HalamanInputLaporan() {
       const desaTerpilih = desaList[0];
 
       const komTerpilih = komoditasList[0];
+      const namaKomNorm = komTerpilih ? normalisasiNamaKomoditas(komTerpilih.nama) : '';
       const optTerpilih =
-        optList.find((o) => o.komoditasId === komTerpilih?.id) ?? optList[0];
+        optList.find(
+          (o) =>
+            o.komoditasId === komTerpilih?.id ||
+            (komTerpilih &&
+              (o.komoditasId === komTerpilih.kodeIkon ||
+                o.komoditasId === `kom-${komTerpilih.kodeIkon}`)) ||
+            (namaKomNorm && normalisasiNamaKomoditas(o.namaKomoditas) === namaKomNorm)
+        ) ?? optList[0];
 
       return {
         id: undefined,
@@ -487,10 +498,25 @@ export default function HalamanInputLaporan() {
     [nilaiForm.kecamatanId, semuaWilayah]
   );
 
-  const daftarOptTersaring = useMemo(
-    () => semuaOpt.filter((o) => o.komoditasId === nilaiForm.komoditasId),
-    [nilaiForm.komoditasId, semuaOpt]
-  );
+  const daftarOptTersaring = useMemo(() => {
+    if (!nilaiForm.komoditasId) return [];
+    const komTerpilih = daftarKomoditas.find((k) => k.id === nilaiForm.komoditasId);
+    const namaKomNorm = komTerpilih ? normalisasiNamaKomoditas(komTerpilih.nama) : '';
+    return semuaOpt.filter((o) => {
+      if (o.komoditasId === nilaiForm.komoditasId) return true;
+      if (
+        komTerpilih &&
+        (o.komoditasId === komTerpilih.kodeIkon ||
+          o.komoditasId === `kom-${komTerpilih.kodeIkon}`)
+      ) {
+        return true;
+      }
+      if (namaKomNorm && normalisasiNamaKomoditas(o.namaKomoditas) === namaKomNorm) {
+        return true;
+      }
+      return false;
+    });
+  }, [nilaiForm.komoditasId, daftarKomoditas, semuaOpt]);
 
   const kabupatenTerpilih = useMemo(
     () => daftarKabupaten.find((k) => k.id === nilaiForm.kabupatenId) ?? null,
@@ -512,6 +538,18 @@ export default function HalamanInputLaporan() {
     () => daftarOptTersaring.find((o) => o.id === nilaiForm.optId) ?? null,
     [daftarOptTersaring, nilaiForm.optId]
   );
+
+  useEffect(() => {
+    if (daftarOptTersaring.length > 0) {
+      const ada = daftarOptTersaring.some((o) => o.id === nilaiForm.optId);
+      if (!ada) {
+        setValue('optId', daftarOptTersaring[0].id, {
+          shouldValidate: true,
+          shouldDirty: false,
+        });
+      }
+    }
+  }, [daftarOptTersaring, nilaiForm.optId, setValue]);
 
   // Kalkulasi domain real-time (AGENTS.md §8)
   const luasAmatanAman = angkaAman(nilaiForm.luasAmatan);
@@ -674,7 +712,16 @@ export default function HalamanInputLaporan() {
   };
 
   const tanganiPilihKomoditas = (komId: string) => {
-    const optPertama = semuaOpt.find((o) => o.komoditasId === komId);
+    const komTerpilih = daftarKomoditas.find((k) => k.id === komId);
+    const namaKomNorm = komTerpilih ? normalisasiNamaKomoditas(komTerpilih.nama) : '';
+    const optPertama = semuaOpt.find(
+      (o) =>
+        o.komoditasId === komId ||
+        (komTerpilih &&
+          (o.komoditasId === komTerpilih.kodeIkon ||
+            o.komoditasId === `kom-${komTerpilih.kodeIkon}`)) ||
+        (namaKomNorm && normalisasiNamaKomoditas(o.namaKomoditas) === namaKomNorm)
+    );
     setValue('komoditasId', komId, { shouldValidate: true, shouldDirty: true });
     setValue('optId', optPertama?.id ?? '', { shouldValidate: true, shouldDirty: true });
   };
@@ -1567,8 +1614,8 @@ export default function HalamanInputLaporan() {
                       Komoditas Perkebunan & Identifikasi OPT
                     </h2>
                     <p className="mt-0.5 text-xs text-ink-600">
-                      Tujuh komoditas utama perkebunan Kalimantan Timur tercatat terpisah sesuai
-                      katalog baku.
+                      Komoditas unggulan perkebunan Kalimantan Timur tercatat terpisah sesuai
+                      katalog baku dinas.
                     </p>
                   </div>
                 </div>
@@ -1578,7 +1625,7 @@ export default function HalamanInputLaporan() {
                 </span>
               </div>
 
-              {/* Tujuh Ubin Komoditas */}
+              {/* Ubin Komoditas */}
               <div className="mt-5">
                 <span
                   id="label-ubin-komoditas"
@@ -1589,7 +1636,7 @@ export default function HalamanInputLaporan() {
                 <div
                   role="radiogroup"
                   aria-labelledby="label-ubin-komoditas"
-                  className="mt-2 grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-7"
+                  className="mt-2 grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-8"
                 >
                   {daftarKomoditas.map((kom) => {
                     const aktif = nilaiForm.komoditasId === kom.id;

@@ -22,6 +22,8 @@ export interface DbUptdRow {
   jumlah_pengamat_aktif: number;
 }
 
+import { MASTER_OPT } from '../data/masterKomoditasOptKaltim';
+
 export interface DbWilayahRow {
   id: string;
   tipe: 'kabupaten' | 'kecamatan' | 'desa';
@@ -36,7 +38,7 @@ export interface DbKomoditasRow {
   id: string;
   nama: string;
   aktif: boolean;
-  kode_ikon: 'lada' | 'sawit' | 'kakao' | 'karet' | 'aren' | 'kelapa_dalam' | 'kopi';
+  kode_ikon: 'lada' | 'sawit' | 'kakao' | 'karet' | 'aren' | 'kelapa_dalam' | 'kopi' | 'pala';
 }
 
 export interface DbOptRow {
@@ -195,127 +197,27 @@ export const MOCK_WILAYAH: DbWilayahRow[] = [
   { id: 'desa-bontanglestari', tipe: 'desa', nama: 'Bontang Lestari', parent_id: 'kec-bontangselatan', uptd_id: 'uptd-utara', lat_pusat: 0.0615, lng_pusat: 117.4412 },
 ];
 
-// 7 Komoditas Baku Terpisah (AGENTS.md §8)
+// Komoditas Baku Terpisah (AGENTS.md §8) & Komoditas Rempah Unggulan Kaltim (Pala)
 export const MOCK_KOMODITAS: DbKomoditasRow[] = [
-  { id: 'kom-lada', nama: 'Lada', aktif: true, kode_ikon: 'lada' },
   { id: 'kom-sawit', nama: 'Kelapa Sawit', aktif: true, kode_ikon: 'sawit' },
+  { id: 'kom-lada', nama: 'Lada', aktif: true, kode_ikon: 'lada' },
   { id: 'kom-kakao', nama: 'Kakao', aktif: true, kode_ikon: 'kakao' },
   { id: 'kom-karet', nama: 'Karet', aktif: true, kode_ikon: 'karet' },
   { id: 'kom-aren', nama: 'Aren', aktif: true, kode_ikon: 'aren' },
   { id: 'kom-kelapa', nama: 'Kelapa Dalam', aktif: true, kode_ikon: 'kelapa_dalam' },
   { id: 'kom-kopi', nama: 'Kopi', aktif: true, kode_ikon: 'kopi' },
+  { id: 'kom-pala', nama: 'Pala', aktif: true, kode_ikon: 'pala' },
 ];
 
-export const MOCK_OPT: DbOptRow[] = [
-  {
-    id: 'opt-ganoderma',
-    komoditas_id: 'kom-sawit',
-    nama_lokal: 'Busuk Pangkal Batang',
-    nama_ilmiah: 'Ganoderma boninense',
-    jenis: 'penyakit',
-    gejala: 'Daun tombak tidak membuka lebih dari 3 pelepah, pelepah bawah mengering dan menggantung, muncul tubuh buah jamur di pangkal batang.',
-    rekomendasi: 'Parit isolasi 1x1 m pada pokok terserang, aplikasi agens hayati Trichoderma harzianum, sanitasi bonggol terinfeksi.',
-  },
-  {
-    id: 'opt-oryctes',
-    komoditas_id: 'kom-sawit',
-    nama_lokal: 'Kumbang Tanduk',
-    nama_ilmiah: 'Oryctes rhinoceros',
-    jenis: 'hama',
-    gejala: 'Pelepah daun muda terpotong berbentuk segitiga seperti huruf V dan terdapat gerekan pada titik tumbuh.',
-    rekomendasi: 'Pemasangan feromon agregat (Feromonas), aplikasi jamur entomopatogen Metarhizium anisopliae pada tumpukan tandan kosong.',
-  },
-  {
-    id: 'opt-ulatapi',
-    komoditas_id: 'kom-sawit',
-    nama_lokal: 'Ulat Api',
-    nama_ilmiah: 'Setora nitens',
-    jenis: 'hama',
-    gejala: 'Helaian anak daun habis dimakan hingga menyisakan lidi dari pelepah bawah merambat ke tajuk atas.',
-    rekomendasi: 'Penanaman tanaman bermanfaat Turnera subulata, konservasi musuh alami Sycanus sp., pengutipan kepompong.',
-  },
-  {
-    id: 'opt-bpblada',
-    komoditas_id: 'kom-lada',
-    nama_lokal: 'Busuk Pangkal Batang Lada',
-    nama_ilmiah: 'Phytophthora capsici',
-    jenis: 'penyakit',
-    gejala: 'Layu mendadak seluruh sulur, bercak hitam berlendir pada leher akar, daun menguning lalu gugur cepat.',
-    rekomendasi: 'Pembuatan saluran drainase kebun, pemangkasan sulur cacing, pemberian bubur Bordeaux dan Trichoderma sp.',
-  },
-  {
-    id: 'opt-dasynus',
-    komoditas_id: 'kom-lada',
-    nama_lokal: 'Kepik Penghisap Buah Lada',
-    nama_ilmiah: 'Dasynus piperis',
-    jenis: 'hama',
-    gejala: 'Buah lada menghitam, kosong (hampa), dan rontok sebelum masak fisiologis.',
-    rekomendasi: 'Sanitasi gulma inang, pemanfaatan jamur Beauveria bassiana pada pagi/sore hari.',
-  },
-  {
-    id: 'opt-pbk',
-    komoditas_id: 'kom-kakao',
-    nama_lokal: 'Penggerek Buah Kakao (PBK)',
-    nama_ilmiah: 'Conopomorpha cramerella',
-    jenis: 'hama',
-    gejala: 'Buah masak awal belang kuning-hijau, biji saling melekat dan berwarna kehitaman saat dibelah.',
-    rekomendasi: 'PsPSP (Panen sering, Pemangkasan teratur, Sanitasi kulit buah, Pemupukan berimbang) serta sarungisasi buah.',
-  },
-  {
-    id: 'opt-busukbuahkakao',
-    komoditas_id: 'kom-kakao',
-    nama_lokal: 'Busuk Buah Kakao',
-    nama_ilmiah: 'Phytophthora palmivora',
-    jenis: 'penyakit',
-    gejala: 'Bercak cokelat kehitaman berbatas tegas dimulai dari ujung atau pangkal buah dan tertutup miselium putih.',
-    rekomendasi: 'Pemangkasan penaung untuk menurunkan kelembapan, pemetikan dan penguburan buah busuk sedalam 30 cm.',
-  },
-  {
-    id: 'opt-gugurdaunkaret',
-    komoditas_id: 'kom-karet',
-    nama_lokal: 'Gugur Daun Corynespora',
-    nama_ilmiah: 'Corynespora cassiicola',
-    jenis: 'penyakit',
-    gejala: 'Bercak nekrotik menyirip seperti tulang ikan sepanjang tulang daun diikuti gugur daun berulang.',
-    rekomendasi: 'Pemupukan ekstra K pada awal pembentukan daun baru, aplikasi fungisida selektif pada kebun pembibitan.',
-  },
-  {
-    id: 'opt-jamurakarputih',
-    komoditas_id: 'kom-karet',
-    nama_lokal: 'Jamur Akar Putih (JAP)',
-    nama_ilmiah: 'Rigidoporus microporus',
-    jenis: 'penyakit',
-    gejala: 'Daun kusam menguning lalu meranggas, terdapat rizomorfa putih menjalar kuat pada permukaan akar tunggang.',
-    rekomendasi: 'Pembukaan leher akar, pengolesan belerang/Trichoderma konidia pada perakaran sehat di sekeliling pohon sakit.',
-  },
-  {
-    id: 'opt-artona',
-    komoditas_id: 'kom-aren',
-    nama_lokal: 'Ulat Daun Aren',
-    nama_ilmiah: 'Artona catoxantha',
-    jenis: 'hama',
-    gejala: ' Bercak transparan memanjang seperti tangga pada helaian daun tua yang mengering seperti terbakar.',
-    rekomendasi: 'Pemangkasan pelepah tua terserang berat dan pelepasan parasitoid Apanteles artonae.',
-  },
-  {
-    id: 'opt-brontispa',
-    komoditas_id: 'kom-kelapa',
-    nama_lokal: 'Kumbang Janur Kelapa',
-    nama_ilmiah: 'Brontispa longissima',
-    jenis: 'hama',
-    gejala: 'Janur yang belum membuka tampak cokelat mengering dan berkerut akibat gerekan larva dan imago.',
-    rekomendasi: 'Pelepasan parasitoid Tetrastichus brontispae dan aplikasi Metarhizium anisopliae pada pucuk kelapa.',
-  },
-  {
-    id: 'opt-pbkopi',
-    komoditas_id: 'kom-kopi',
-    nama_lokal: 'Penggerek Buah Kopi (PBKo)',
-    nama_ilmiah: 'Hypothenemus hampei',
-    jenis: 'hama',
-    gejala: 'Lubang kecil di cakram ujung buah kopi; buah muda gugur dan buah tua berlubang-lubang menurunkan mutu biji.',
-    rekomendasi: 'Lelesan, racutan, rampasan buah tersisa pascapanen serta pemasangan perangkap atraktan alkohol-metanol.',
-  },
-];
+export const MOCK_OPT: DbOptRow[] = MASTER_OPT.map((m) => ({
+  id: m.id,
+  komoditas_id: m.komoditasKode,
+  nama_lokal: m.namaLokal,
+  nama_ilmiah: m.namaIlmiah,
+  jenis: m.jenis,
+  gejala: m.gejala,
+  rekomendasi: m.rekomendasi,
+}));
 
 // Profil pengguna fiktif berlabel simulasi (SECURITY.md §9 & SCHEMA.md §8)
 export const MOCK_PROFILES: DbProfileRow[] = [

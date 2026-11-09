@@ -9,6 +9,7 @@ import {
   PlusCircle,
   Search,
   ShieldCheck,
+  Sparkles,
   Sprout,
   TreePalm,
   Trees,
@@ -43,6 +44,7 @@ const IKON_KOMODITAS: Record<Komoditas['kodeIkon'], LucideIcon> = {
   aren: TreePalm,
   kelapa_dalam: Leaf,
   kopi: Coffee,
+  pala: Sparkles,
 };
 
 const UKURAN_HALAMAN_OPT = 6;
@@ -112,7 +114,13 @@ export default function HalamanKomoditasOpt() {
   const petaStatistikKomoditas = useMemo(() => {
     const peta = new Map<string, { jumlahOpt: number; luasTotal: number }>();
     for (const k of komoditas) {
-      const jumlahOpt = daftarOpt.filter((o) => o.komoditasId === k.id).length;
+      const jumlahOpt = daftarOpt.filter(
+        (o) =>
+          o.komoditasId === k.id ||
+          o.komoditasId === k.kodeIkon ||
+          o.komoditasId === `kom-${k.kodeIkon}` ||
+          o.namaKomoditas.toLowerCase() === k.nama.toLowerCase()
+      ).length;
       const barisRekap = ringkasanKomoditas.find((r) => r.komoditasId === k.id);
       peta.set(k.id, {
         jumlahOpt,
@@ -125,7 +133,17 @@ export default function HalamanKomoditasOpt() {
   const optTersaring = useMemo(() => {
     const q = kataKunci.trim().toLowerCase();
     return daftarOpt.filter((item) => {
-      if (filterKomoditasId && item.komoditasId !== filterKomoditasId) return false;
+      if (filterKomoditasId) {
+        const kom = komoditas.find((k) => k.id === filterKomoditasId);
+        const cocok =
+          item.komoditasId === filterKomoditasId ||
+          (kom &&
+            (item.komoditasId === kom.id ||
+              item.komoditasId === kom.kodeIkon ||
+              item.komoditasId === `kom-${kom.kodeIkon}` ||
+              item.namaKomoditas.toLowerCase() === kom.nama.toLowerCase()));
+        if (!cocok) return false;
+      }
       if (filterJenis !== 'semua' && item.jenis !== filterJenis) return false;
       if (q) {
         const gabungan = [
@@ -141,7 +159,7 @@ export default function HalamanKomoditasOpt() {
       }
       return true;
     });
-  }, [daftarOpt, filterJenis, filterKomoditasId, kataKunci]);
+  }, [daftarOpt, filterJenis, filterKomoditasId, kataKunci, komoditas]);
 
   const totalHalaman = Math.max(1, Math.ceil(optTersaring.length / UKURAN_HALAMAN_OPT));
   const halamanAman = Math.min(halaman, totalHalaman);
@@ -202,7 +220,7 @@ export default function HalamanKomoditasOpt() {
               Data Komoditas & Katalog Organisme Pengganggu Tumbuhan (OPT)
             </h1>
             <p className="mt-0.5 text-xs text-ink-600 sm:text-sm">
-              Tujuh komoditas perkebunan utama Kalimantan Timur dicatat secara terpisah beserta
+              Komoditas perkebunan unggulan Kalimantan Timur dicatat secara terpisah beserta
               identifikasi gejala dan rekomendasi pengendalian terpadu.
             </p>
           </div>
@@ -365,17 +383,17 @@ export default function HalamanKomoditasOpt() {
       {galat && <KotakGalatData pesan={galat} onCobaLagi={muatKatalog} />}
 
       {memuat && komoditas.length === 0 ? (
-        <KerangkaMuat pesan="Memuat 7 komoditas baku dan katalog OPT Kaltim..." jumlahBaris={5} />
+        <KerangkaMuat pesan="Memuat katalog komoditas baku dan OPT Kaltim..." jumlahBaris={5} />
       ) : (
         <>
-          {/* Tujuh Kartu Komoditas Baku Terpisah (AGENTS.md §8) */}
-          <section aria-labelledby="judul-tujuh-komoditas" className="space-y-3">
+          {/* Kartu Komoditas Baku Terpisah (AGENTS.md §8) */}
+          <section aria-labelledby="judul-komoditas" className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2
-                id="judul-tujuh-komoditas"
+                id="judul-komoditas"
                 className="text-sm font-bold uppercase tracking-wider text-ink-900"
               >
-                7 Komoditas Perkebunan Baku (Klik untuk Menyaring Katalog OPT)
+                Komoditas Perkebunan Baku (Klik untuk Menyaring Katalog OPT)
               </h2>
               {filterKomoditasId && (
                 <button
@@ -391,7 +409,7 @@ export default function HalamanKomoditasOpt() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
               {komoditas.map((k) => {
                 const IkonKom = IKON_KOMODITAS[k.kodeIkon] ?? Leaf;
                 const stat = petaStatistikKomoditas.get(k.id);

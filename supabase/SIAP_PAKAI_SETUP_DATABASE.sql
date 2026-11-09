@@ -943,7 +943,7 @@ from (
 join public.wilayah induk on induk.kode = v.induk_kode
 on conflict (kode) do nothing;
 
--- 6. Tujuh Komoditas Baku Terpisah (AGENTS.md Â§8)
+-- 6. Delapan Komoditas Unggulan Perkebunan Kaltim (AGENTS.md §8)
 insert into public.komoditas (nama, kode_ikon, aktif)
 values
   ('Lada', 'lada', true),
@@ -952,10 +952,11 @@ values
   ('Karet', 'karet', true),
   ('Aren', 'aren', true),
   ('Kelapa Dalam', 'kelapa_dalam', true),
-  ('Kopi', 'kopi', true)
+  ('Kopi', 'kopi', true),
+  ('Pala', 'pala', true)
 on conflict (nama) do nothing;
 
--- 7. Katalog OPT Utama Perkebunan Kalimantan Timur (SCHEMA.md Â§3.5)
+-- 7. Katalog Master 40 OPT Utama Perkebunan Kalimantan Timur (SCHEMA.md §3.5)
 insert into public.opt (komoditas_id, nama_lokal, nama_ilmiah, jenis, gejala, rekomendasi)
 select
   k.id,
@@ -966,42 +967,141 @@ select
   v.rekomendasi
 from (
   values
+    -- 1. KELAPA SAWIT (6 OPT)
     ('Kelapa Sawit', 'Busuk Pangkal Batang', 'Ganoderma boninense', 'penyakit',
-      'Daun tombak tidak membuka lebih dari 3 pelepah, pelepah bawah mengering dan menggantung, muncul tubuh buah jamur di pangkal batang.',
-      'Parit isolasi 1x1 m pada pokok terserang, aplikasi agens hayati Trichoderma harzianum, sanitasi bonggol terinfeksi.'),
+      'Daun tombak tidak membuka lebih dari 3 pelepah, pelepah bawah mengering dan menggantung (sengkleh), muncul basidioma (tubuh buah jamur) di pangkal batang.',
+      'Pembuatan parit isolasi 1x1 m mengelilingi pokok terserang, aplikasi agens hayati Trichoderma harzianum / T. virens, sanitasi dan pencacahan bonggol terinfeksi.'),
     ('Kelapa Sawit', 'Kumbang Tanduk', 'Oryctes rhinoceros', 'hama',
-      'Pelepah daun muda terpotong berbentuk segitiga seperti huruf V dan terdapat gerekan pada titik tumbuh.',
-      'Pemasangan feromon agregat (Feromonas), aplikasi jamur entomopatogen Metarhizium anisopliae pada tumpukan tandan kosong.'),
+      'Pelepah daun muda yang baru membuka tampak terpotong berbentuk baji / segitiga menyerupai huruf V, terdapat gerekan serat pada titik tumbuh (pupus).',
+      'Pemasangan perangkap feromon agregat (Feromonas) 1 unit/2 Ha, penaburan jamur entomopatogen Metarhizium anisopliae pada tumpukan tandan kosong/serasah.'),
     ('Kelapa Sawit', 'Ulat Api', 'Setora nitens', 'hama',
-      'Helaian anak daun habis dimakan hingga menyisakan lidi dari pelepah bawah merambat ke tajuk atas.',
-      'Penanaman tanaman bermanfaat Turnera subulata, konservasi musuh alami Sycanus sp., pengutipan kepompong.'),
+      'Helaian anak daun habis dimakan ulat menyisakan lidi, serangan bermula dari pelepah bawah merambat cepat ke tajuk atas hingga tajuk meranggas.',
+      'Konservasi tanaman inang musuh alami Turnera subulata dan Antigonon leptopus, pelepasan predator Sycanus dichotomus, aplikasi biopestisida Bacillus thuringiensis.'),
+    ('Kelapa Sawit', 'Ulat Kantung', 'Metisa plana', 'hama',
+      'Daun berlubang-lubang kecil dan tampak bintik kantung ulat menggantung dari kerucut daun; tajuk tampak kering keabuan dari kejauhan.',
+      'Pemanfaatan musuh alami Dolichogenidea metesae, pengutipan manual pada tanaman muda, injeksi batang bila tingkat serangan di atas ambang kritis.'),
+    ('Kelapa Sawit', 'Tikus Pohon', 'Rattus tiomanicus', 'hama',
+      'Buah sawit matang berlubang bekas keratan gigi seri, bunga jantan/betina muda hancur dikerat, berondolan berserakan di piringan.',
+      'Pemasangan rumah burung hantu (Tyto alba) 1 unit per 20-25 Ha, sanitasi piringan kebun, penggunaan umpan rodentisida secara selektif.'),
+    ('Kelapa Sawit', 'Busuk Daun Antraknosa', 'Colletotrichum gloeosporioides', 'penyakit',
+      'Bercak kecil melingkar cokelat gelap dengan batas kuning cerah di ujung helaian daun bibit / TBM, bercak menyatu membuat daun layu terbakar.',
+      'Pengurangan naungan pembibitan untuk sirkulasi udara, pemisahan bibit terinfeksi, aplikasi fungisida tembaga atau agens hayati Trichoderma.'),
+
+    -- 2. LADA (5 OPT)
     ('Lada', 'Busuk Pangkal Batang Lada', 'Phytophthora capsici', 'penyakit',
-      'Layu mendadak seluruh sulur, bercak hitam berlendir pada leher akar, daun menguning lalu gugur cepat.',
-      'Pembuatan saluran drainase kebun, pemangkasan sulur cacing, pemberian bubur Bordeaux dan Trichoderma sp.'),
+      'Layu mendadak seluruh daun sulur tanaman dalam 3-7 hari, leher akar dan pangkal batang bawah tanah busuk basah berbau khas kehitaman.',
+      'Pembuatan saluran drainase kebun yang dalam, pemangkasan sulur cacing dekat tanah, pemanfaatan agens hayati Trichoderma sp. dicampur pupuk kandang matang.'),
     ('Lada', 'Kepik Penghisap Buah Lada', 'Dasynus piperis', 'hama',
-      'Buah lada menghitam, kosong (hampa), dan rontok sebelum masak fisiologis.',
-      'Sanitasi gulma inang, pemanfaatan jamur Beauveria bassiana pada pagi/sore hari.'),
+      'Tusukan pada tandan buah menyebabkan buah lada berbercak hitam, mengering keriput, kopong/hampa, dan rontok massal sebelum matang.',
+      'Sanitasi gulma inang di sekitar tajar lada, penyemprotan agens entomopatogen Beauveria bassiana pada sore hari saat kepik aktif.'),
+    ('Lada', 'Kepik Penghisap Bunga Lada', 'Diconocoris hewetti', 'hama',
+      'Tandan bunga lada muda menghitam, mengering, membusuk, dan rontok sehingga tandan buah tidak terbentuk.',
+      'Pemangkasan pohon panjat (tajar) agar kebun mendapat sinar matahari cukup, aplikasi minyak nimba (pestisida nabati) atau Beauveria bassiana.'),
+    ('Lada', 'Penggerek Batang Lada', 'Lophobaris piperis', 'hama',
+      'Pucuk dan cabang lada layu mendadak mengering, terdapat lubang gerek kecil pada ruas buku cabang disertai kotoran gerek kecokelatan.',
+      'Pemotongan cabang terserang 5 cm di bawah lubang gerek lalu dibakar, pengolesan pasta Beauveria bassiana pada ruas buku berpotensi gerek.'),
+    ('Lada', 'Penyakit Kuning Lada', 'Meloidogyne incognita / Radopholus similis', 'penyakit',
+      'Pertumbuhan merana, daun menguning perlahan dari bawah ke atas, daun mengecil dan kaku, perakaran membengkak (puru akar) dan membusuk.',
+      'Penaburan agens hayati nematoda mikoriza arbuskula (CMA) dan Paecilomyces lilacinus, penambahan bahan organik tinggi dan pengapuran tanah masam.'),
+
+    -- 3. KAKAO (5 OPT)
     ('Kakao', 'Penggerek Buah Kakao (PBK)', 'Conopomorpha cramerella', 'hama',
-      'Buah masak awal belang kuning-hijau, biji saling melekat dan berwarna kehitaman saat dibelah.',
-      'PsPSP (Panen sering, Pemangkasan teratur, Sanitasi kulit buah, Pemupukan berimbang) serta sarungisasi buah.'),
+      'Buah masak lebih awal dengan belang tidak merata (kuning-hijau), saat dibelah biji saling melekat, mengeras keriput, dan bobot merosot tajam.',
+      'Penerapan PsPSP (Panen sering 1x seminggu, Pemangkasan pemeliharaan, Sanitasi kulit buah dibenamkan, Pemupukan seimbang) serta penyarungan (kondomisasi) buah 8 cm.'),
     ('Kakao', 'Busuk Buah Kakao', 'Phytophthora palmivora', 'penyakit',
-      'Bercak cokelat kehitaman berbatas tegas dimulai dari ujung atau pangkal buah dan tertutup miselium putih.',
-      'Pemangkasan penaung untuk menurunkan kelembapan, pemetikan dan penguburan buah busuk sedalam 30 cm.'),
+      'Bercak cokelat basah berbatas tegas mulai dari ujung atau pangkal buah meluas cepat hingga buah membusuk hitam tertutup lapisan miselium putih bertepung.',
+      'Pemetikan buah busuk lalu dikubur sedalam 30 cm, pemangkasan tunas air (wiwilan) dan tajuk untuk menurunkan kelembapan relatif tajuk kebun.'),
+    ('Kakao', 'Kanker Batang Kakao (VSD)', 'Ceratobasidium theobromae', 'penyakit',
+      'Daun kedua atau ketiga dari pucuk menguning dengan pulau-pulau hijau khas, daun gugur meninggalkan ranting gundul, pembuluh kayu berbintik cokelat bila diserut.',
+      'Pemangkasan ranting sakit 30 cm di bawah batas gejala serutan cokelat, sanitasi alat pangkas dengan alkohol, pengolesan fungisida tembaga pada bekas pangkasan.'),
+    ('Kakao', 'Kepik Penghisap Buah Kakao', 'Helopeltis antonii', 'hama',
+      'Bercak cekung cokelat kehitaman berdiameter 2-3 mm pada kulit buah muda (cherelle) menyebabkan buah mengering (cherelle wilt) atau buah tua berkeropeng retak.',
+      'Pengendalian semut hitam (Dolichoderus thoracicus) dan kutu putih sebagai musuh alami, penyemprotan ekstrak biji mimba atau Beauveria bassiana.'),
+    ('Kakao', 'Penggerek Batang Merah Kakao', 'Zeuzera coffeae', 'hama',
+      'Ranting atau cabang kakao layu, kering mendadak, patah tertiup angin; terdapat lubang gerek dengan kotoran silindris bulat merah kecokelatan di tanah.',
+      'Penyuntikan larutan biopestisida Beauveria bassiana ke dalam lubang gerek aktif lalu lubang ditutup pasak kayu/lumpur tanah.'),
+
+    -- 4. KARET (4 OPT)
     ('Karet', 'Gugur Daun Corynespora', 'Corynespora cassiicola', 'penyakit',
-      'Bercak nekrotik menyirip seperti tulang ikan sepanjang tulang daun diikuti gugur daun berulang.',
-      'Pemupukan ekstra K pada awal pembentukan daun baru, aplikasi fungisida selektif pada kebun pembibitan.'),
+      'Bercak nekrotik kehitaman menyirip sepanjang tulang daun menyerupai duri ikan (herring bone), daun muda maupun tua gugur berulang hingga tajuk meranggas gundul.',
+      'Aplikasi fungisida propikonazol atau heksakonazol sistemik pada kebun pembibitan/TBM, pemupukan ekstra hara K untuk mempertebal dinding sel kutikula daun.'),
     ('Karet', 'Jamur Akar Putih (JAP)', 'Rigidoporus microporus', 'penyakit',
-      'Daun kusam menguning lalu meranggas, terdapat rizomorfa putih menjalar kuat pada permukaan akar tunggang.',
-      'Pembukaan leher akar, pengolesan belerang/Trichoderma konidia pada perakaran sehat di sekeliling pohon sakit.'),
+      'Daun kanopi kusam menguning lalu gugur perlahan, pohon berbunga di luar musim; leher akar dan permukaan akar tunggang ditumbuhi benang miselium tebal putih menjalar.',
+      'Pembongkaran leher akar, pengolesan belerang 100-200 gram per pohon atau pasta Trichoderma sp. pada perakaran, parit isolasi pemutus kontak akar sehat.'),
+    ('Karet', 'Kering Alur Sadur (KAS)', 'Fisiologis (Over tapping)', 'penyakit',
+      'Lateks tidak mengalir pada sebagian atau seluruh alur sadapan, alur sadur mengering berwarna kecokelatan dan timbul rekahan pecah kulit.',
+      'Penghentian penyadapan sementara (istirahat sadap 3-6 bulan), perbaikan sistem sadap d/3 atau d/4, pemupukan berimbang hara NPKMg.'),
+    ('Karet', 'Rayap Kayu Karet', 'Coptotermes curvignathus', 'hama',
+      'Lorong kembara tanah menutupi permukaan kulit batang karet dari pangkal bawah hingga cabang, jaringan kambium dan kayu dimakan hingga pohon roboh.',
+      'Pembongkaran sarang rayap di sekitar tunggul lapuk, aplikasi agens hayati jamur Metarhizium anisopliae pada alur lintasan rayap.'),
+
+    -- 5. AREN (5 OPT)
     ('Aren', 'Ulat Daun Aren', 'Artona catoxantha', 'hama',
-      'Bercak transparan memanjang seperti tangga pada helaian daun tua yang mengering seperti terbakar.',
-      'Pemangkasan pelepah tua terserang berat dan pelepasan parasitoid Apanteles artonae.'),
+      'Helaian daun muda dan tua aren berlubang gerus memanjang seperti tangga di bawah permukaan daun, daun mengering cokelat kemerahan seperti terbakar api.',
+      'Pemangkasan dan pemusnahan pelepah terserang berat, pelepasan parasitoid telur Trichogrammatoidea nana dan parasitoid larva Apanteles artonae.'),
+    ('Aren', 'Kumbang Tanduk Aren', 'Oryctes rhinoceros', 'hama',
+      'Titik tumbuh tanaman aren digerek, daun janur yang membuka menampilkan pola potongan segitiga terpotong berulang, pertumbuhan terhambat.',
+      'Pemasangan perangkap feromon, aplikasi spora jamur Metarhizium anisopliae pada pangkal batang aren tua lapuk tempat perkembangbiakan lundi/larva.'),
+    ('Aren', 'Kumbang Sagu / Moncong Aren', 'Rhynchophorus ferrugineus', 'hama',
+      'Larva menggerek empulur batang aren hingga bagian dalam batang berlubang dan membusuk basah berbau masam, pelepah pucuk terkulai patah.',
+      'Penutupan bekas luka pangkas atau bekas sadapan dengan ter atau bubur bordes, pemasangan perangkap feromon Ferolure di sudut kebun aren.'),
+    ('Aren', 'Busuk Titik Tumbuh Aren', 'Thielaviopsis paradoxa', 'penyakit',
+      'Titik tumbuh pelepah pucuk aren membusuk basah kecokelatan mengeluarkan cairan berlendir, tanaman mati dari bagian paling atas.',
+      'Perbaikan drainase sekitar pokok aren, pemangkasan bagian sakit dan penyemprotan klorotalonil atau suspensi Trichoderma konidia.'),
+    ('Aren', 'Bercak Daun Cercospora Aren', 'Cercospora sp.', 'penyakit',
+      'Bercak bulat kecil cokelat dengan titik tengah kelabu keputihan dikelilingi halo kuning pada helaian daun aren bibit dan tanaman muda.',
+      'Pengaturan jarak tanam bibit aren untuk pencahayaan optimal, pembuangan daun terinfeksi, aplikasi fungisida nabati rebusan daun sirih dan mimba.'),
+
+    -- 6. KELAPA DALAM (5 OPT)
     ('Kelapa Dalam', 'Kumbang Janur Kelapa', 'Brontispa longissima', 'hama',
-      'Janur yang belum membuka tampak cokelat mengering dan berkerut akibat gerekan larva dan imago.',
-      'Pelepasan parasitoid Tetrastichus brontispae dan aplikasi Metarhizium anisopliae pada pucuk kelapa.'),
+      'Larva dan kumbang memakan epidermis daun janur yang belum membuka, setelah membuka janur tampak kering cokelat bergaris-garis seperti terbakar.',
+      'Pelepasan parasitoid larva Tetrastichus brontispae, penyemprotan agens hayati Metarhizium anisopliae pada tajuk janur belum membuka.'),
+    ('Kelapa Dalam', 'Kumbang Tanduk Kelapa', 'Oryctes rhinoceros', 'hama',
+      'Pelepah daun muda terpotong menyerupai huruf V, titik tumbuh tanaman kelapa mengalami kerusakan gerek silindris.',
+      'Pemasangan feromon agregat 1 set/2 Ha, penaburan serbuk jamur Metarhizium anisopliae pada serasah busuk atau batang kelapa tumbang.'),
+    ('Kelapa Dalam', 'Belalang Sexava Kelapa', 'Sexava nubila', 'hama',
+      'Helaian daun kelapa dimakan habis dari pinggir menyisakan lidi pelepah; pada serangan eksplosif seluruh tajuk gundul menurunkan produksi kopra hingga 80%.',
+      'Pelepasan parasitoid telur Doirania leefmansi, pemasangan perangkap lem pada pangkal batang pokok kelapa, sanitasi semak inang.'),
+    ('Kelapa Dalam', 'Kutu Perisai Kelapa', 'Aspidiotus destructor', 'hama',
+      'Permukaan bawah daun kelapa tertutup lapisan kutu berkerak kuning keputihan, cairan sel dihisap hingga daun menguning layu lalu mengering.',
+      'Konservasi predator kumbang kubah Chilocorus politus, penyemprotan deterjen nabati encer atau minyak nimba untuk meluruhkan lapisan lilin kutu.'),
+    ('Kelapa Dalam', 'Busuk Pucuk Kelapa', 'Phytophthora palmivora', 'penyakit',
+      'Daun tombak pucuk layu terkulai patah dan busuk mengeluarkan bau busuk menusuk, pelepah lain menguning berangsur dari tengah ke luar.',
+      'Pembersihan dan pembakaran jaringan busuk pucuk, aplikasi pasta bubur Bordeaux atau agens hayati Trichoderma pada pangkal pelepah pucuk.'),
+
+    -- 7. KOPI (5 OPT)
     ('Kopi', 'Penggerek Buah Kopi (PBKo)', 'Hypothenemus hampei', 'hama',
-      'Lubang kecil di cakram ujung buah kopi; buah muda gugur dan buah tua berlubang-lubang menurunkan mutu biji.',
-      'Lelesan, racutan, rampasan buah tersisa pascapanen serta pemasangan perangkap atraktan alkohol-metanol.')
+      'Lubang bulat kecil diameter 1 mm pada bagian cakram (ujung) buah kopi; buah muda rontok dan buah tua berbiji keropos cacat menurunkan mutu cita rasa.',
+      'Kutipan buah terserang (lelesan, racutan, rampasan pascapanen), pemasangan perangkap botol plastik dengan senyawa penarik (atraktan) metanol:etanol (3:1).'),
+    ('Kopi', 'Karat Daun Kopi', 'Hemileia vastatrix', 'penyakit',
+      'Bercak kuning muda di permukaan atas daun yang bertransisi menjadi serbuk oranye terang seperti tepung karat di permukaan bawah daun, daun rontok dini.',
+      'Penanaman varietas tahan karat daun (Arabika Sigarar Utang / Robusta klon unggul), pemangkasan pohon naungan lamtoro untuk sirkulasi cahaya, fungisida tembaga.'),
+    ('Kopi', 'Penggerek Ranting Kopi', 'Xylosandrus compactus', 'hama',
+      'Ranting sekunder dan tersier kopi mengering dari ujung mundur ke pangkal daun layu cokelat kehitaman, terdapat lubang gerek di sisi bawah ranting.',
+      'Pemotongan ranting terserang 5 cm di bawah batas gerek lalu dibakar, pemeliharaan kebersihan kebun dan pemanfaatan jamur entomopatogen Beauveria bassiana.'),
+    ('Kopi', 'Kutu Dompolan Kopi', 'Planococcus citri', 'hama',
+      'Kumpulan kutu putih bertepung berkoloni pada tangkai buah, bunga, dan tunas muda kopi; embun jelaga hitam tumbuh lebat menutupi fotosintesis daun.',
+      'Pengendalian sarang semut hitam pendukung kutu, pemangkasan cabang ternaungi, penyemprotan air sabun lembut / pestisida nabati mimba.'),
+    ('Kopi', 'Jamur Upas Kopi', 'Corticium salmonicolor', 'penyakit',
+      'Lapisan kerak tipis mengkilap seperti perak di cabang/batang yang berkembang menjadi kerak merah muda (salmon) tebal mengelupas, cabang di atasnya mati ranting.',
+      'Pengerokan kerak jamur pada cabang berkayu tebal lalu dilumuri ter atau bubur Bordeaux, pemangkasan ranting kecil terinfeksi berat.'),
+
+    -- 8. PALA (5 OPT)
+    ('Pala', 'Penggerek Batang Pala', 'Batocera hercules', 'hama',
+      'Batang tanaman pala berlubang gerek mengeluarkan cairan getah merah kecokelatan bercampur serbuk kayu, daun tajuk atas menguning layu meranggas.',
+      'Pembersihan lubang gerek dengan kawat lalu disuntik larutan Beauveria bassiana / minyak nimba kemudian lubang ditutup pasak kayu.'),
+    ('Pala', 'Busuk Buah Kering Pala', 'Stigmina myristicae', 'penyakit',
+      'Bercak nekrotik bulat kecil cokelat pada daging buah pala yang mengeras berkeriput, buah membelah sebelum matang fisiologis (pecah dini) merusak fuli.',
+      'Pemangkasan sanitasi tajuk tanaman pala yang terlalu rimbun agar sinar matahari tembus, pengumpulan dan penguburan buah terserang sedalam 40 cm.'),
+    ('Pala', 'Busuk Buah Basah Pala', 'Colletotrichum gloeosporioides', 'penyakit',
+      'Bercak basah melekuk cokelat kehitaman meluas pada buah pala muda dan tua disertai gugur buah massal saat musim hujan basah berkepanjangan.',
+      'Penyemprotan larutan suspensi Trichoderma harzianum pada permukaan buah, perbaikan parit pembuangan air di sekitar kebun pala.'),
+    ('Pala', 'Kanker Batang Pala', 'Phytophthora sp.', 'penyakit',
+      'Kulit batang pangkal bawah tampak memar basah kehitaman, mengeluarkan eksudat getah kental merah marun berbau busuk, tajuk daun menguning perlahan.',
+      'Pengerokan kulit batang sakit hingga jaringan sehat terlihat, pengolesan pasta fungisida tembaga atau biopestisida Trichoderma, pembukaan leher akar.'),
+    ('Pala', 'Rayap Pangkal Batang Pala', 'Coptotermes sp.', 'hama',
+      'Pangkal akar dan batang bagian bawah tertutup lorong lumpur rayap; rayap menggerus jaringan empulur berkayu hingga pohon pala goyah dan tumbang.',
+      'Pembersihan sisa tunggul lapuk di areal kebun pala, penaburan jamur entomopatogen Metarhizium anisopliae pada alur tanah perakaran.')
 ) as v(nama_komoditas, nama_lokal, nama_ilmiah, jenis, gejala, rekomendasi)
 join public.komoditas k on k.nama = v.nama_komoditas
 where not exists (
