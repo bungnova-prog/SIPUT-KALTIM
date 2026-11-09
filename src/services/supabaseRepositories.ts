@@ -8,6 +8,7 @@ import {
 import {
   MASTER_KOMODITAS,
   MASTER_OPT,
+  ambilMasterOptPerKomoditas,
   cariKomoditasMaster,
   normalisasiNamaKomoditas,
 } from '../data/masterKomoditasOptKaltim';
@@ -946,7 +947,7 @@ export const komoditasOptRepository: KomoditasOptRepository = {
   },
 
   async daftarOpt(komoditasId?: string): Promise<Hasil<Opt[]>> {
-    if (!cacheOpt) {
+    if (!cacheOpt || cacheOpt.length < MASTER_OPT.length) {
       try {
         const [klien, komHasil] = await Promise.all([
           Promise.resolve(ambilKlienSupabase()),
@@ -1060,7 +1061,25 @@ export const komoditasOptRepository: KomoditasOptRepository = {
       return false;
     });
 
-    return { ok: true, data: daftar };
+    if (daftar.length > 0) {
+      return { ok: true, data: daftar };
+    }
+
+    // Fallback kuat jika filter tidak mengembalikan item
+    const masterOptList = ambilMasterOptPerKomoditas(komTerpilih?.nama ?? komoditasId);
+    return {
+      ok: true,
+      data: masterOptList.map((m) => ({
+        id: m.id,
+        komoditasId,
+        namaKomoditas: komTerpilih?.nama ?? m.namaKomoditas,
+        namaLokal: m.namaLokal,
+        namaIlmiah: m.namaIlmiah,
+        jenis: m.jenis,
+        gejala: m.gejala,
+        rekomendasi: m.rekomendasi,
+      })),
+    };
   },
 
   async tambahOptSimulasi(input, peminta): Promise<Hasil<Opt>> {

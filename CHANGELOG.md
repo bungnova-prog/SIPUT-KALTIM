@@ -22,6 +22,9 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/) dan
 - Menambahkan auto-provisioning komoditas dan OPT ke basis data Supabase (`pastikanKomoditasDanOptTersediaDiSupabase` dan `sinkronkanMasterKomoditasOptKeSupabase` pada `src/services/supabaseRepositories.ts`) sehingga simpan atau publikasi laporan selalu lolos integritas relasional (*foreign key constraint*).
 
 ### Diperbaiki
+- Menambahkan mekanisme fallback instan dan garansi sistem pada formulir laporan (`src/pages/HalamanInputLaporan.tsx`), repositori Supabase (`src/services/supabaseRepositories.ts`), dan simulasi (`src/services/mockRepositories.ts`), sehingga dropdown pilihan jenis OPT dijamin 100% selalu terisi dengan katalog resmi 40 OPT bahkan jika basis data belum terisi atau sesi auth belum selesai.
+- Memperbaiki pemulihan draf lokal dan pergantian komoditas pada Formulir Input Laporan agar secara otomatis memilihkan OPT pertama yang sesuai komoditas terpilih tanpa menyisakan nilai kosong.
+- Membuka kebijakan izin baca RLS (`to anon, authenticated`) untuk tabel referensi `public.opt`, `public.komoditas`, `public.wilayah`, `public.uptd`, dan `public.konfigurasi` pada `supabase/SIAP_PAKAI_SETUP_DATABASE.sql`.
 - Mengatasi kendala isian jenis hama/penyakit (OPT) yang kosong atau tidak muncul saat memilih komoditas Aren, Lada, Kakao, Kelapa Sawit, Kelapa Dalam, Kopi, dan Pala pada formulir laporan (`src/pages/HalamanInputLaporan.tsx`), melalui filter pencocokan ID/kode/nama komoditas secara tangguh serta pemilihan otomatis OPT pertama saat ubin komoditas diklik.
 - Menyesuaikan tata letak ubin komoditas perkebunan (`grid-cols-2 sm:grid-cols-4 lg:grid-cols-8`) pada Formulir Input Laporan dan Halaman Komoditas & OPT agar menampung 8 komoditas perkebunan Kaltim secara simetris dan responsif.
 - Memperbarui skrip basis data `supabase/SIAP_PAKAI_SETUP_DATABASE.sql` dengan 8 komoditas dan 40 benih baris OPT master resmi.

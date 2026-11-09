@@ -3,6 +3,7 @@ import {
   ambilMasterDesaPerKecamatan,
   normalisasiNamaWilayah,
 } from '../data/masterWilayahKaltim';
+import { ambilMasterOptPerKomoditas } from '../data/masterKomoditasOptKaltim';
 import {
   buatFotoSvgSimulasi,
   MOCK_KOMODITAS,
@@ -1054,11 +1055,25 @@ export const komoditasOptRepository: KomoditasOptRepository = {
         k.nama.toLowerCase() === komoditasId.toLowerCase()
     );
     const idCocok = new Set([komoditasId, kom?.id, kom?.kode_ikon, kom ? `kom-${kom.kode_ikon}` : ''].filter(Boolean));
+    const terfilter = dbOpt
+      .filter((o) => idCocok.has(o.komoditas_id))
+      .map(petakanOpt);
+    if (terfilter.length > 0) {
+      return { ok: true, data: terfilter };
+    }
+    const masterList = ambilMasterOptPerKomoditas(kom?.nama ?? komoditasId);
     return {
       ok: true,
-      data: dbOpt
-        .filter((o) => idCocok.has(o.komoditas_id))
-        .map(petakanOpt),
+      data: masterList.map((m) => ({
+        id: m.id,
+        komoditasId,
+        namaKomoditas: kom?.nama ?? m.namaKomoditas,
+        namaLokal: m.namaLokal,
+        namaIlmiah: m.namaIlmiah,
+        jenis: m.jenis,
+        gejala: m.gejala,
+        rekomendasi: m.rekomendasi,
+      })),
     };
   },
   async tambahOptSimulasi(input, peminta): Promise<Hasil<Opt>> {

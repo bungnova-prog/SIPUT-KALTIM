@@ -61,7 +61,11 @@ import {
   skemaFormLaporan,
   type NilaiFormLaporan,
 } from '../lib/skemaFormLaporan';
-import { normalisasiNamaKomoditas } from '../data/masterKomoditasOptKaltim';
+import {
+  MASTER_OPT,
+  ambilMasterOptPerKomoditas,
+  normalisasiNamaKomoditas,
+} from '../data/masterKomoditasOptKaltim';
 import { useAppStore } from '../lib/storeAplikasi';
 import {
   hapusDrafLokalForm,
@@ -282,15 +286,21 @@ export default function HalamanInputLaporan() {
       setMemuatReferensi(false);
       return;
     }
-    if (!hasilOpt.ok) {
-      setGalatReferensi(hasilOpt.pesan);
-      setMemuatReferensi(false);
-      return;
-    }
-
     const wilayahData = hasilWilayah.data;
     const komoditasData = hasilKomoditas.data.filter((k) => k.aktif);
-    const optData = hasilOpt.data;
+    const optData =
+      hasilOpt.ok && hasilOpt.data && hasilOpt.data.length > 0
+        ? hasilOpt.data
+        : MASTER_OPT.map((m) => ({
+            id: m.id,
+            komoditasId: m.komoditasKode,
+            namaKomoditas: m.namaKomoditas,
+            namaLokal: m.namaLokal,
+            namaIlmiah: m.namaIlmiah,
+            jenis: m.jenis,
+            gejala: m.gejala,
+            rekomendasi: m.rekomendasi,
+          }));
 
     setSemuaWilayah(wilayahData);
     setDaftarKomoditas(komoditasData);
@@ -324,14 +334,26 @@ export default function HalamanInputLaporan() {
           (profilAktif.peran === 'admin' || profilAktif.wilayahId === kabDraf?.id);
 
         if (bolehPakaiWilayahDraf && desaDraf && kecDraf && kabDraf) {
-          const optCocok = optData.some(
+          const komoditasDraf = komoditasData.find((k) => k.id === drafTersimpan.nilai.komoditasId);
+          const namaKomDrafNorm = komoditasDraf ? normalisasiNamaKomoditas(komoditasDraf.nama) : '';
+
+          const optCocok = optData.find(
             (o) =>
               o.id === drafTersimpan.nilai.optId &&
-              o.komoditasId === drafTersimpan.nilai.komoditasId
+              (o.komoditasId === drafTersimpan.nilai.komoditasId ||
+                (namaKomDrafNorm && normalisasiNamaKomoditas(o.namaKomoditas) === namaKomDrafNorm))
           );
-          const optPengganti = optData.find(
-            (o) => o.komoditasId === drafTersimpan.nilai.komoditasId
-          );
+          const optPengganti =
+            optData.find(
+              (o) =>
+                o.komoditasId === drafTersimpan.nilai.komoditasId ||
+                (komoditasDraf &&
+                  (o.komoditasId === komoditasDraf.kodeIkon ||
+                    o.komoditasId === `kom-${komoditasDraf.kodeIkon}`)) ||
+                (namaKomDrafNorm && normalisasiNamaKomoditas(o.namaKomoditas) === namaKomDrafNorm)
+            ) ?? ambilMasterOptPerKomoditas(komoditasDraf?.nama ?? drafTersimpan.nilai.komoditasId)[0];
+
+          const optIdAman = optCocok?.id ?? optPengganti?.id ?? bawaan.optId;
 
           reset({
             id: drafTersimpan.nilai.id,
@@ -345,7 +367,7 @@ export default function HalamanInputLaporan() {
             lat: drafTersimpan.nilai.lat,
             lng: drafTersimpan.nilai.lng,
             komoditasId: drafTersimpan.nilai.komoditasId,
-            optId: optCocok ? drafTersimpan.nilai.optId : optPengganti?.id ?? bawaan.optId,
+            optId: optIdAman,
             faseTanaman: drafTersimpan.nilai.faseTanaman,
             luasAmatan: drafTersimpan.nilai.luasAmatan,
             luasRingan: drafTersimpan.nilai.luasRingan,
@@ -502,7 +524,7 @@ export default function HalamanInputLaporan() {
     if (!nilaiForm.komoditasId) return [];
     const komTerpilih = daftarKomoditas.find((k) => k.id === nilaiForm.komoditasId);
     const namaKomNorm = komTerpilih ? normalisasiNamaKomoditas(komTerpilih.nama) : '';
-    return semuaOpt.filter((o) => {
+    const hasil = semuaOpt.filter((o) => {
       if (o.komoditasId === nilaiForm.komoditasId) return true;
       if (
         komTerpilih &&
@@ -516,6 +538,22 @@ export default function HalamanInputLaporan() {
       }
       return false;
     });
+
+    if (hasil.length > 0) return hasil;
+
+    // Garansi sistem: jika data belum terisi di basis data atau filter tidak cocok,
+    // langsung sediakan dari katalog master 40 OPT resmi Kaltim!
+    const masterList = ambilMasterOptPerKomoditas(komTerpilih?.nama ?? nilaiForm.komoditasId);
+    return masterList.map((m) => ({
+      id: m.id,
+      komoditasId: nilaiForm.komoditasId,
+      namaKomoditas: komTerpilih?.nama ?? m.namaKomoditas,
+      namaLokal: m.namaLokal,
+      namaIlmiah: m.namaIlmiah,
+      jenis: m.jenis,
+      gejala: m.gejala,
+      rekomendasi: m.rekomendasi,
+    }));
   }, [nilaiForm.komoditasId, daftarKomoditas, semuaOpt]);
 
   const kabupatenTerpilih = useMemo(
@@ -535,7 +573,10 @@ export default function HalamanInputLaporan() {
     [daftarKomoditas, nilaiForm.komoditasId]
   );
   const optTerpilih = useMemo(
-    () => daftarOptTersaring.find((o) => o.id === nilaiForm.optId) ?? null,
+    () =>
+      daftarOptTersaring.find((o) => o.id === nilaiForm.optId) ??
+      daftarOptTersaring[0] ??
+      null,
     [daftarOptTersaring, nilaiForm.optId]
   );
 
@@ -714,16 +755,20 @@ export default function HalamanInputLaporan() {
   const tanganiPilihKomoditas = (komId: string) => {
     const komTerpilih = daftarKomoditas.find((k) => k.id === komId);
     const namaKomNorm = komTerpilih ? normalisasiNamaKomoditas(komTerpilih.nama) : '';
-    const optPertama = semuaOpt.find(
-      (o) =>
-        o.komoditasId === komId ||
-        (komTerpilih &&
-          (o.komoditasId === komTerpilih.kodeIkon ||
-            o.komoditasId === `kom-${komTerpilih.kodeIkon}`)) ||
-        (namaKomNorm && normalisasiNamaKomoditas(o.namaKomoditas) === namaKomNorm)
-    );
+    const optPertama =
+      semuaOpt.find(
+        (o) =>
+          o.komoditasId === komId ||
+          (komTerpilih &&
+            (o.komoditasId === komTerpilih.kodeIkon ||
+              o.komoditasId === `kom-${komTerpilih.kodeIkon}`)) ||
+          (namaKomNorm && normalisasiNamaKomoditas(o.namaKomoditas) === namaKomNorm)
+      ) ?? ambilMasterOptPerKomoditas(komTerpilih?.nama ?? komId)[0];
+
     setValue('komoditasId', komId, { shouldValidate: true, shouldDirty: true });
-    setValue('optId', optPertama?.id ?? '', { shouldValidate: true, shouldDirty: true });
+    if (optPertama) {
+      setValue('optId', optPertama.id, { shouldValidate: true, shouldDirty: true });
+    }
   };
 
   const tanganiAmbilKoordinatOtomatis = () => {
@@ -1697,7 +1742,7 @@ export default function HalamanInputLaporan() {
                     }
                     className="mt-1.5 min-h-[44px] w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium text-ink-900 focus:border-brand-700"
                   >
-                    {daftarOptTersaring.length === 0 && (
+                    {(!nilaiForm.optId || !daftarOptTersaring.some((o) => o.id === nilaiForm.optId)) && (
                       <option value="">-- Pilih Jenis OPT --</option>
                     )}
                     {daftarOptTersaring.map((itemOpt) => (

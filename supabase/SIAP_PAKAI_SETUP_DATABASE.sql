@@ -487,7 +487,7 @@ alter table public.notifikasi enable row level security;
 -- 2. Kebijakan Tabel Referensi (wilayah, uptd, komoditas, opt, konfigurasi)
 drop policy if exists uptd_baca on public.uptd;
 create policy uptd_baca on public.uptd
-  for select to authenticated using (true);
+  for select to anon, authenticated using (true);
 
 drop policy if exists uptd_kelola_admin on public.uptd;
 create policy uptd_kelola_admin on public.uptd
@@ -497,7 +497,7 @@ create policy uptd_kelola_admin on public.uptd
 
 drop policy if exists wilayah_baca on public.wilayah;
 create policy wilayah_baca on public.wilayah
-  for select to authenticated using (true);
+  for select to anon, authenticated using (true);
 
 drop policy if exists wilayah_kelola_admin on public.wilayah;
 create policy wilayah_kelola_admin on public.wilayah
@@ -507,7 +507,7 @@ create policy wilayah_kelola_admin on public.wilayah
 
 drop policy if exists komoditas_baca on public.komoditas;
 create policy komoditas_baca on public.komoditas
-  for select to authenticated using (true);
+  for select to anon, authenticated using (true);
 
 drop policy if exists komoditas_kelola_admin on public.komoditas;
 create policy komoditas_kelola_admin on public.komoditas
@@ -517,7 +517,7 @@ create policy komoditas_kelola_admin on public.komoditas
 
 drop policy if exists opt_baca on public.opt;
 create policy opt_baca on public.opt
-  for select to authenticated using (true);
+  for select to anon, authenticated using (true);
 
 drop policy if exists opt_kelola_admin on public.opt;
 create policy opt_kelola_admin on public.opt
@@ -527,7 +527,7 @@ create policy opt_kelola_admin on public.opt
 
 drop policy if exists konfigurasi_baca on public.konfigurasi;
 create policy konfigurasi_baca on public.konfigurasi
-  for select to authenticated using (true);
+  for select to anon, authenticated using (true);
 
 drop policy if exists konfigurasi_kelola_admin on public.konfigurasi;
 create policy konfigurasi_kelola_admin on public.konfigurasi
