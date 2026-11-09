@@ -17,7 +17,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/) dan
 ## [Belum Dirilis]
 
 ### Ditambahkan
-- Menambahkan ilustrasi maskot Petugas POPT Lapangan Pengendali OPT Perkebunan (`src/assets/ilustrasi-popt.png` dan `public/ilustrasi-popt.png`) pada panel identitas instansi halaman masuk (portal login) di `src/pages/HalamanMasuk.tsx`.
+- Memperbarui aset ilustrasi maskot `ilustrasi-popt.png` dengan poster kampanye POPT resmi "OPT Kita Kendalikan Bersama!" dan menyelaraskan tata letak kartu ilustrasi pada halaman masuk (`src/pages/HalamanMasuk.tsx`).
 - Menambahkan katalog master resmi 40 OPT perkebunan Kalimantan Timur (`src/data/masterKomoditasOptKaltim.ts`) yang mencakup 8 komoditas perkebunan (Kelapa Sawit, Lada, Kakao, Karet, Aren, Kelapa Dalam, Kopi, Pala) lengkap dengan nama lokal, nama ilmiah, kategori hama/penyakit, deskripsi gejala lapangan, dan rekomendasi teknis POPT dinas perkebunan.
 - Menambahkan komoditas Pala (`kom-pala`) pada tipe domain (`src/types/domain.ts`), data simulasi, pemetaan ikon Lucide (`Sparkles`), dan skrip penyiapan database (`supabase/SIAP_PAKAI_SETUP_DATABASE.sql`).
 - Menambahkan auto-provisioning komoditas dan OPT ke basis data Supabase (`pastikanKomoditasDanOptTersediaDiSupabase` dan `sinkronkanMasterKomoditasOptKeSupabase` pada `src/services/supabaseRepositories.ts`) sehingga simpan atau publikasi laporan selalu lolos integritas relasional (*foreign key constraint*).

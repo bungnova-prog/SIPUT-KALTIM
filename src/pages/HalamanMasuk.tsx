@@ -112,20 +112,16 @@ export default function HalamanMasuk() {
             </div>
 
             {/* Ilustrasi Petugas POPT Lapangan */}
-            <div className="my-6 flex flex-col items-center justify-center text-center">
-              <div className="relative flex items-center justify-center">
-                <div
-                  className="absolute -inset-3 rounded-full bg-gold-500/15 blur-xl"
-                  aria-hidden
-                />
+            <div className="my-5 flex flex-col items-center justify-center text-center">
+              <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-brand-700/60 bg-black/40 shadow-xl transition-transform duration-300 hover:scale-[1.02]">
                 <img
                   src={ilustrasiPopt}
-                  alt="Ilustrasi Petugas POPT Pengendali Organisme Pengganggu Tumbuhan"
-                  className="relative h-44 w-auto object-contain drop-shadow-xl transition-transform duration-300 hover:scale-105 sm:h-52"
+                  alt="Ilustrasi Gerakan Pengendalian OPT Perkebunan Kalimantan Timur"
+                  className="h-auto w-full object-cover"
                 />
               </div>
-              <p className="mt-3 text-[11px] font-semibold tracking-wide text-brand-100">
-                Petugas POPT Pengendali Organisme Pengganggu Tumbuhan
+              <p className="mt-2.5 text-[11px] font-semibold tracking-wide text-brand-100">
+                Gerakan Bersama Pengendalian OPT Perkebunan Kalimantan Timur
               </p>
             </div>
 
